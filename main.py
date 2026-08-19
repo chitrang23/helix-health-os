@@ -8,6 +8,7 @@ from typing import Dict, List, Optional
 import hashlib
 import uuid
 import json
+import math
 
 from core.config import settings
 from core.database import engine, Base, get_db, AsyncSessionLocal
@@ -15,7 +16,7 @@ from models.orm import User, LabReport
 from services.ocr_engine import OCREngine
 from services.velocity_engine import VelocityEngine
 
-app = FastAPI(title="Helix Enterprise Health OS", version="8.0.0")
+app = FastAPI(title="Helix Enterprise Health OS", version="9.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -223,7 +224,6 @@ async def get_user_summary(user_id: str, db: AsyncSession = Depends(get_db)):
                         }
                     })
 
-        # Dynamic Drug-Biomarker Toxicity & Conflict Shield
         if any("metformin" in str(rx).lower() for rx in (user.active_prescriptions or [])):
             creat_val = markers.get("serum_creatinine", 1.0)
             if creat_val > 1.4:
@@ -345,6 +345,60 @@ async def upload_user_report(
     db.add(new_report)
     await db.commit()
     return {"status": "success", "extracted_biomarkers": markers, "user_id": user.id}
+
+# --- DYNAMIC BIOMARKER-GROUNDED NEURO-STRESS ASSESSMENT ---
+@app.post("/api/v1/stress/assess-dynamic")
+async def assess_dynamic_stress(
+    user_id: str = Form(...),
+    sleep_hours: float = Form(6.5),
+    work_stress: int = Form(7),
+    pre_pulse: int = Form(84),
+    post_pulse: int = Form(72),
+    db: AsyncSession = Depends(get_db)
+):
+    res_r = await db.execute(select(LabReport).where(LabReport.user_id == user_id).order_by(LabReport.record_date.desc()))
+    latest = res_r.scalars().first()
+    markers = latest.biomarkers if latest else {}
+
+    # 1. Biomarker-linked Allostatic Burden
+    fbs = markers.get("fasting_glucose", 95.0)
+    vit_d = markers.get("vitamin_d", 30.0)
+    wbc = markers.get("wbc_count", 6500.0)
+
+    # Biological load multipliers
+    glycemic_stress_strain = max(0.0, (fbs - 100.0) * 0.08)
+    vitd_neuro_deficiency = max(0.0, (30.0 - vit_d) * 0.12)
+    inflammatory_strain = 1.5 if wbc > 10000 else 0.0
+
+    somatic_strain = (10 - sleep_hours) * 1.3 + (work_stress * 0.85) + glycemic_stress_strain + vitd_neuro_deficiency + inflammatory_strain
+    allostatic_score = round(somatic_strain, 1)
+
+    # 2. Vagal Recovery & HRV Proxy (Pulse Drop Efficiency)
+    pulse_delta = max(0, pre_pulse - post_pulse)
+    vagal_recovery_index = min(100.0, round((pulse_delta / max(1, pre_pulse - 60)) * 100, 1))
+    estimated_cortisol_drop = round(pulse_delta * 1.85, 1) # nmol/L estimated salivary drop
+
+    status_map = {
+        "en": "Elevated Systemic Allostatic Load" if allostatic_score > 12 else "Optimal Somato-Parasympathetic Tone",
+        "hi": "शरीर में कॉर्टिसोल एवं तनाव भार अधिक" if allostatic_score > 12 else "संतुलित एवं सामान्य न्यूरो-टोन",
+        "mr": "शरीरातील कॉर्टिसॉल व तणाव भार जास्त" if allostatic_score > 12 else "संतुलित व उत्तम न्यूरो-टोन"
+    }
+
+    biological_drivers = []
+    if fbs > 100:
+        biological_drivers.append(f"Fasting Sugar ({fbs} mg/dL) triggers sympathetic cortisol surge.")
+    if vit_d < 20:
+        biological_drivers.append(f"Low Vitamin D ({vit_d} ng/mL) impairs neural stress recovery.")
+
+    return {
+        "allostatic_score": allostatic_score,
+        "status": status_map,
+        "vagal_recovery_index": vagal_recovery_index,
+        "pulse_delta": pulse_delta,
+        "estimated_cortisol_drop_nmol": estimated_cortisol_drop,
+        "biological_drivers": biological_drivers,
+        "dawn_glucose_warning": allostatic_score > 12 and sleep_hours < 6.5
+    }
 
 # --- DYNAMIC SYMPTOM CORRELATOR ---
 @app.post("/api/v1/symptoms/correlate")
@@ -543,17 +597,6 @@ async def correlate_symptoms(symptom: str = Form(...), user_id: str = Form(...),
 
     return {"symptom": symptom, "correlations": correlations}
 
-# --- STRESS ASSESSMENT ENGINE ---
-@app.post("/api/v1/stress/assess")
-async def assess_stress(sleep_hours: float = Form(6.5), work_stress: int = Form(7)):
-    allostatic = round(((10 - sleep_hours) * 1.4 + work_stress * 0.9), 1)
-    status_map = {
-        "en": "Elevated Cortisol Load" if allostatic > 11 else "Moderate Allostatic Tone",
-        "hi": "कॉर्टिसोल तनाव स्तर अधिक" if allostatic > 11 else "मध्यम तनाव स्तर",
-        "mr": "कॉर्टिसॉल तणाव पातळी जास्त" if allostatic > 11 else "मध्यम तणाव पातळी"
-    }
-    return {"score": allostatic, "status": status_map}
-
 # --- APPLICATION UI ---
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
 def helix_portal():
@@ -694,7 +737,7 @@ def helix_portal():
                 <button class="nav-link" data-bs-toggle="tab" data-bs-target="#view-treatments"><i class="fa-solid fa-notes-medical me-2 text-info"></i><span id="tab-treat-lbl">Past Treatments & History</span></button>
             </li>
             <li class="nav-item">
-                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#view-stress"><i class="fa-solid fa-spa me-2 text-purple"></i><span id="tab-stress-lbl">Stress & Neuro-Recovery Studio</span></button>
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#view-stress"><i class="fa-solid fa-brain me-2 text-purple"></i><span id="tab-stress-lbl">Stress & Neuro-Recovery Studio</span></button>
             </li>
             <li class="nav-item">
                 <button class="nav-link" data-bs-toggle="tab" data-bs-target="#view-symptoms"><i class="fa-solid fa-stethoscope me-2 text-warning"></i><span id="tab-symp-lbl">Symptom Checker</span></button>
@@ -863,39 +906,60 @@ def helix_portal():
                 </div>
             </div>
 
-            <!-- TAB 5: DEDICATED STRESS & NEURO-RECOVERY STUDIO -->
+            <!-- TAB 5: DYNAMIC NEURO-RECOVERY & VAGAL BIOFEEDBACK STUDIO -->
             <div class="tab-pane fade" id="view-stress">
                 <div class="row g-4 mb-4">
                     
-                    <!-- 4-4-4-4 Box Breathing Vagal Pacer -->
+                    <!-- 1. Real-Time Vagal Pacer & Heart Recovery Tap Test -->
                     <div class="col-lg-6">
                         <div class="card p-4 h-100 text-center">
-                            <h5 class="text-white fw-bold mb-1"><i class="fa-solid fa-lungs text-info me-2"></i> <span id="lbl-breath-title">4-4-4-4 Box Breathing (Vagus Activator)</span></h5>
-                            <p class="text-secondary small mb-3" id="lbl-breath-sub">Slow diaphragmatic breathing stimulates the vagus nerve, reducing high cortisol and lowering fasting glucose surges.</p>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="text-white fw-bold mb-0"><i class="fa-solid fa-lungs text-info me-2"></i> 4-4-4-4 Vagus Activation Pacer</h5>
+                                <span class="badge bg-purple" id="circadian-badge"><i class="fa-solid fa-clock me-1"></i> Night Mode Active</span>
+                            </div>
+                            <p class="text-secondary small mb-3">Slow diaphragmatic breathing activates the parasympathetic tone, reducing morning cortisol surges.</p>
                             
                             <div class="my-3">
                                 <div class="breath-circle" id="pacer">Inhale (4s)</div>
                             </div>
                             
                             <div class="d-flex justify-content-center gap-2 mt-3 mb-3">
-                                <button class="btn btn-sm btn-outline-info" onclick="playBinaural(40)"><i class="fa-solid fa-headphones me-1"></i> 40Hz Gamma Focus</button>
-                                <button class="btn btn-sm btn-outline-success" onclick="playBinaural(10)"><i class="fa-solid fa-water me-1"></i> 10Hz Alpha Calm</button>
+                                <button class="btn btn-sm btn-outline-info" onclick="playBinaural(40)"><i class="fa-solid fa-headphones me-1"></i> 40Hz Gamma</button>
+                                <button class="btn btn-sm btn-outline-success" onclick="playBinaural(10)"><i class="fa-solid fa-water me-1"></i> 10Hz Alpha</button>
                                 <button class="btn btn-sm btn-outline-primary" onclick="playBinaural(4)"><i class="fa-solid fa-moon me-1"></i> 4Hz Theta NSDR</button>
                                 <button class="btn btn-sm btn-outline-danger" onclick="stopBinaural()"><i class="fa-solid fa-stop"></i></button>
                             </div>
 
-                            <button class="btn btn-helix px-4 py-2" id="breath-btn" onclick="toggleBreathing()"><i class="fa-solid fa-play me-1"></i> <span id="lbl-breath-btn">Start Guided Pacer</span></button>
+                            <button class="btn btn-helix px-4 py-2 w-100 mb-3" id="breath-btn" onclick="toggleBreathing()"><i class="fa-solid fa-play me-1"></i> <span id="lbl-breath-btn">Start Guided Pacer</span></button>
+
+                            <!-- Interactive Vagal Heart Rate Test -->
+                            <div class="p-3 bg-dark rounded border border-secondary border-opacity-50 text-start">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <strong class="text-white small"><i class="fa-solid fa-heart-pulse text-danger me-1"></i> 60s Vagal Recovery & HRV Proxy</strong>
+                                    <span class="badge bg-success" id="hrv-badge">Ready</span>
+                                </div>
+                                <div class="row g-2 small">
+                                    <div class="col-6">
+                                        <label class="text-secondary" style="font-size:10px;">PRE-BREATHING PULSE (BPM)</label>
+                                        <input type="number" id="pre-pulse" class="form-control form-control-sm" value="84">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="text-secondary" style="font-size:10px;">POST-BREATHING PULSE (BPM)</label>
+                                        <input type="number" id="post-pulse" class="form-control form-control-sm" value="72">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Circadian Cortisol Rhythm & Allostatic Load Assessment -->
+                    <!-- 2. Biomarker-Linked Neuro-Stress Assessment & Cortisol Curve -->
                     <div class="col-lg-6">
                         <div class="card p-4 h-100">
-                            <h5 class="text-white fw-bold mb-1"><i class="fa-solid fa-brain text-warning me-2"></i> <span id="lbl-stress-title">Circadian Cortisol & Stress Load Assessment</span></h5>
-                            <p class="text-secondary small mb-3" id="lbl-stress-sub">Chronic evening stress raises cortisol, which causes the liver to release excess sugar before morning.</p>
+                            <h5 class="text-white fw-bold mb-1"><i class="fa-solid fa-brain text-warning me-2"></i> Biomarker-Grounded Neuro-Stress Engine</h5>
+                            <p class="text-secondary small mb-3">Calculates systemic cortisol and allostatic load by linking sleep/stress directly to your active lab tests.</p>
                             
-                            <div class="p-2 bg-dark rounded border border-secondary border-opacity-25 mb-3">
-                                <canvas id="cortisolChart" style="max-height: 140px;"></canvas>
+                            <div class="p-2 bg-dark rounded border border-secondary border-opacity-25 mb-3" style="height: 150px;">
+                                <canvas id="cortisolChart"></canvas>
                             </div>
 
                             <label class="small text-secondary fw-bold" id="lbl-sleep-in">NIGHTLY SLEEP DURATION (HOURS)</label>
@@ -906,11 +970,11 @@ def helix_portal():
                             <input type="range" class="form-range mb-2" id="st-stress" min="1" max="10" value="7" oninput="document.getElementById('st-val').innerText = this.value">
                             <div class="text-end small text-warning fw-bold"><span id="lbl-lvl">Level</span> <span id="st-val">7</span> / 10</div>
 
-                            <button class="btn btn-helix w-100 mt-3" onclick="computeStressLoad()"><i class="fa-solid fa-calculator me-1"></i> <span id="lbl-stress-btn">Assess Neuro-Stress State</span></button>
+                            <button class="btn btn-helix w-100 mt-3" onclick="computeDynamicStress()"><i class="fa-solid fa-atom me-1"></i> Assess Biological Neuro-Stress</button>
                             
-                            <div class="p-3 bg-dark rounded border border-secondary border-opacity-50 mt-3 small" id="stress-result-box">
-                                <div class="text-warning fw-bold"><i class="fa-solid fa-heart-pulse me-1"></i> <span id="stress-status-tag">Status: Elevated Cortisol Load (Score: 11.2)</span></div>
-                                <div class="text-info mt-1">High evening cortisol prompts liver gluconeogenesis. Perform 4-4-4-4 Box Breathing for 5 minutes before bed.</div>
+                            <!-- Dynamic Result Container -->
+                            <div class="p-3 bg-dark rounded border border-secondary border-opacity-50 mt-3 small" id="stress-dynamic-result">
+                                <div class="text-secondary">Click 'Assess Biological Neuro-Stress' to compute biomarker-linked allostatic burden and vagal recovery index...</div>
                             </div>
                         </div>
                     </div>
@@ -1021,13 +1085,10 @@ Treatment: Prescribed Metformin 500mg daily for prediabetes management and advis
             breath_sub: "Slow diaphragmatic breathing stimulates the vagus nerve, reducing high cortisol and lowering fasting glucose surges.",
             breath_btn_start: "Start Guided Pacer",
             breath_btn_pause: "Pause Guide",
-            stress_title: "Circadian Cortisol & Stress Load Assessment",
-            stress_sub: "Chronic evening stress raises cortisol, which causes the liver to release excess sugar before morning.",
             sleep_in: "NIGHTLY SLEEP DURATION (HOURS)",
             work_in: "WORK / COGNITIVE STRESS (1-10)",
             hours: "Hours",
             lvl: "Level",
-            stress_btn: "Assess Neuro-Stress State",
             breath_phases: ['Inhale (4s)', 'Hold (4s)', 'Exhale (4s)', 'Hold (4s)']
         },
         hi: {
@@ -1062,13 +1123,10 @@ Treatment: Prescribed Metformin 500mg daily for prediabetes management and advis
             breath_sub: "गहरी सांस लेने से मन शांत होता है, तनाव कम होता है और सुबह की शुगर नियंत्रित रहती है।",
             breath_btn_start: "गाइडेड ब्रीदिंग शुरू करें",
             breath_btn_pause: "रोकें",
-            stress_title: "कॉर्टिसोल चक्र एवं तनाव स्तर जांच",
-            stress_sub: "शाम का तनाव कॉर्टिसोल बढ़ाता है, जिससे लीवर सुबह अतिरिक्त शुगर छोड़ता है।",
             sleep_in: "रात की नींद (घंटे)",
             work_in: "काम / मानसिक तनाव (१-१०)",
             hours: "घंटे",
             lvl: "स्तर",
-            stress_btn: "तनाव स्तर की जांच करें",
             breath_phases: ['सांस अंदर लें (४ से.)', 'सांस रोकें (४ से.)', 'सांस छोड़ें (४ से.)', 'खाली रोकें (४ से.)']
         },
         mr: {
@@ -1103,13 +1161,10 @@ Treatment: Prescribed Metformin 500mg daily for prediabetes management and advis
             breath_sub: "दीर्घ श्वास घेतल्याने मज्जासंस्था शांत होते, तणाव कमी होतो आणि सकाळची साखर नियंत्रणात राहते.",
             breath_btn_start: "सराव सुरू करा",
             breath_btn_pause: "थांबवा",
-            stress_title: "कॉर्टिसॉल सायकल व तणाव मोजमाप",
-            stress_sub: "संध्याकाळच्या तणावामुळे कॉर्टिसॉल वाढते, ज्यामुळे यकृत जादा साखर तयार करते.",
             sleep_in: "रात्रीची झोप (तास)",
             work_in: "कामाचा / मानसिक तणाव (१-१०)",
             hours: "तास",
             lvl: "पातळी",
-            stress_btn: "तणाव पातळी तपासा",
             breath_phases: ['श्वास आत घ्या (४ से.)', 'श्वास रोखा (४ से.)', 'श्वास सोडा (४ से.)', 'रिकामे रोखा (४ से.)']
         }
     };
@@ -1172,6 +1227,7 @@ Treatment: Prescribed Metformin 500mg daily for prediabetes management and advis
             }
         });
 
+        // Cortisol Curve Chart
         const cCtx = document.getElementById('cortisolChart').getContext('2d');
         if (cortisolChartInstance) cortisolChartInstance.destroy();
         cortisolChartInstance = new Chart(cCtx, {
@@ -1179,13 +1235,14 @@ Treatment: Prescribed Metformin 500mg daily for prediabetes management and advis
             data: {
                 labels: ['6 AM', '9 AM', '12 PM', '4 PM', '8 PM', '11 PM'],
                 datasets: [
-                    { label: 'Ideal Rhythm', data: [18, 14, 10, 7, 4, 2], borderColor: '#10B981', borderDash: [5, 5], tension: 0.4 },
-                    { label: 'Current Estimate', data: [22, 18, 14, 12, 9, 7], borderColor: '#F59E0B', backgroundColor: 'rgba(245,158,11,0.1)', tension: 0.4 }
+                    { label: 'Ideal Circadian Rhythm', data: [18, 14, 10, 7, 4, 2], borderColor: '#10B981', borderDash: [5, 5], tension: 0.4 },
+                    { label: 'Estimated Biological Curve', data: [24, 19, 15, 13, 10, 8], borderColor: '#F59E0B', backgroundColor: 'rgba(245,158,11,0.1)', tension: 0.4 }
                 ]
             },
             options: {
                 responsive: true,
-                plugins: { legend: { labels: { color: '#94A3B8', boxWidth: 12 } } },
+                maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: '#94A3B8', boxWidth: 12, font: { size: 10 } } } },
                 scales: {
                     x: { ticks: { color: '#94A3B8' }, grid: { color: '#1E2D4A' } },
                     y: { ticks: { color: '#94A3B8' }, grid: { color: '#1E2D4A' } }
@@ -1412,10 +1469,84 @@ Treatment: Prescribed Metformin 500mg daily for prediabetes management and advis
             renderTreatments(d.treatments);
             renderDynamicChart(d.chart_data);
             runLiveTwinSimulation();
+            checkCircadianTime();
             applyTextTranslations();
         } catch (e) {
             console.error("Failed to load dashboard telemetry:", e);
         }
+    }
+
+    function checkCircadianTime() {
+        const hour = new Date().getHours();
+        const badge = document.getElementById('circadian-badge');
+        if (hour >= 19 || hour < 6) {
+            badge.className = "badge bg-purple";
+            badge.innerHTML = `<i class="fa-solid fa-moon me-1"></i> Night Recovery Phase (4Hz Theta)`;
+        } else if (hour >= 6 && hour < 12) {
+            badge.className = "badge bg-success";
+            badge.innerHTML = `<i class="fa-solid fa-sun me-1"></i> Morning Cortisol Awakening Window`;
+        } else {
+            badge.className = "badge bg-info text-dark";
+            badge.innerHTML = `<i class="fa-solid fa-brain me-1"></i> Cognitive Focus Window (40Hz Gamma)`;
+        }
+    }
+
+    async function computeDynamicStress() {
+        if (!activeUser) return;
+        const sl = document.getElementById('st-sleep').value;
+        const st = document.getElementById('st-stress').value;
+        const preP = document.getElementById('pre-pulse').value;
+        const postP = document.getElementById('post-pulse').value;
+
+        const fd = new FormData();
+        fd.append('user_id', activeUser.id);
+        fd.append('sleep_hours', sl);
+        fd.append('work_stress', st);
+        fd.append('pre_pulse', preP);
+        fd.append('post_pulse', postP);
+
+        const res = await fetch('/api/v1/stress/assess-dynamic', { method: 'POST', body: fd });
+        const d = await res.json();
+        const lang = currentLang;
+
+        let driversHtml = '';
+        if (d.biological_drivers && d.biological_drivers.length > 0) {
+            driversHtml = `<div class="mt-2 text-danger small"><strong>Biomarker Strain Identified in Reports:</strong><ul class="mb-0 ps-3">${d.biological_drivers.map(drv => `<li>${drv}</li>`).join('')}</ul></div>`;
+        }
+
+        let dawnHtml = '';
+        if (d.dawn_glucose_warning) {
+            dawnHtml = `<div class="p-2 mt-2 rounded bg-danger bg-opacity-25 border border-danger text-warning small"><i class="fa-solid fa-triangle-exclamation me-1"></i><strong>Dawn Phenomenon Risk:</strong> High evening allostatic load combined with &lt;6.5h sleep will trigger tomorrow's fasting glucose spike via hepatic gluconeogenesis.</div>`;
+        }
+
+        document.getElementById('stress-dynamic-result').innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <strong class="text-warning fs-6"><i class="fa-solid fa-shield-heart me-1"></i> ${d.status[lang]}</strong>
+                <span class="badge bg-purple">Score: ${d.allostatic_score}</span>
+            </div>
+            <div class="row g-2 text-center my-2">
+                <div class="col-4">
+                    <div class="p-2 rounded bg-secondary bg-opacity-25 border border-secondary border-opacity-50">
+                        <div class="text-secondary" style="font-size:10px;">VAGAL RECOVERY</div>
+                        <div class="text-success fw-bold">${d.vagal_recovery_index}%</div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="p-2 rounded bg-secondary bg-opacity-25 border border-secondary border-opacity-50">
+                        <div class="text-secondary" style="font-size:10px;">PULSE DELTA</div>
+                        <div class="text-info fw-bold">-${d.pulse_delta} BPM</div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="p-2 rounded bg-secondary bg-opacity-25 border border-secondary border-opacity-50">
+                        <div class="text-secondary" style="font-size:10px;">CORTISOL DROP</div>
+                        <div class="text-warning fw-bold">-${d.estimated_cortisol_drop_nmol} nmol/L</div>
+                    </div>
+                </div>
+            </div>
+            ${driversHtml}
+            ${dawnHtml}
+        `;
     }
 
     function applyTextTranslations() {
@@ -1447,13 +1578,10 @@ Treatment: Prescribed Metformin 500mg daily for prediabetes management and advis
         document.getElementById('lbl-breath-title').innerText = t.breath_title;
         document.getElementById('lbl-breath-sub').innerText = t.breath_sub;
         document.getElementById('lbl-breath-btn').innerText = breathInterval ? t.breath_btn_pause : t.breath_btn_start;
-        document.getElementById('lbl-stress-title').innerText = t.stress_title;
-        document.getElementById('lbl-stress-sub').innerText = t.stress_sub;
         document.getElementById('lbl-sleep-in').innerText = t.sleep_in;
         document.getElementById('lbl-work-in').innerText = t.work_in;
         document.getElementById('lbl-hours').innerText = t.hours;
         document.getElementById('lbl-lvl').innerText = t.lvl;
-        document.getElementById('lbl-stress-btn').innerText = t.stress_btn;
         document.getElementById('lbl-symp-head').innerText = t.symp_head;
         document.getElementById('lbl-symp-desc').innerText = t.symp_desc;
         document.getElementById('lbl-btn-correlate').innerText = t.btn_correlate;
@@ -1569,24 +1697,6 @@ Treatment: Prescribed Metformin 500mg daily for prediabetes management and advis
         }
     }
 
-    async function computeStressLoad() {
-        const sl = document.getElementById('st-sleep').value;
-        const st = document.getElementById('st-stress').value;
-
-        const fd = new FormData();
-        fd.append('sleep_hours', sl);
-        fd.append('work_stress', st);
-
-        const res = await fetch('/api/v1/stress/assess', { method: 'POST', body: fd });
-        const d = await res.json();
-        const lang = currentLang;
-
-        document.getElementById('stress-result-box').innerHTML = `
-            <div class="text-warning fw-bold"><i class="fa-solid fa-heart-pulse me-1"></i> ${d.status[lang]} (Score: ${d.score})</div>
-            <div class="text-info mt-1">High evening cortisol prompts liver gluconeogenesis. Perform 4-4-4-4 Box Breathing for 5 minutes before bed.</div>
-        `;
-    }
-
     async function login() {
         const em = document.getElementById('in-email').value;
         const pw = document.getElementById('in-pw').value;
@@ -1625,7 +1735,7 @@ Treatment: Prescribed Metformin 500mg daily for prediabetes management and advis
     function logoutUser() {
         localStorage.removeItem('helix_user');
         activeUser = null;
-        loadDashboard();
+        location.reload();
     }
 
     async function uploadReport() {

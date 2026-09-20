@@ -1,0 +1,15 @@
+[tool.coverage.run]
+omit = [
+    "apply_*.py",
+    "fix_*.py",
+    "update_*.py",
+    "upgrade_*.py",
+    "serve_frontend.py",
+    "add_root_route.py",
+    "inspect_auth_setup.py",
+    "cleanup_and_refactor.py",
+    "finalize_project_config.py"
+]
+
+[tool.pytest.ini_options]
+addopts = "-v --cov=. --cov-report=term-missing"

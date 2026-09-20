@@ -1,0 +1,551 @@
+import os
+
+html_content = """<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Helix Health OS - Clinical Intelligence</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --surface: #111827;
+      --surface-border: #1f293d;
+      --accent: #0ea5e9;
+      --accent-glow: rgba(14, 165, 233, 0.25);
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: rgba(17, 24, 39, 0.8);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--surface-border);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 800;
+      font-size: 1.25rem;
+      letter-spacing: -0.5px;
+      color: #fff;
+    }
+    .logo-badge {
+      background: linear-gradient(135deg, #0284c7, #0ea5e9);
+      color: #fff;
+      padding: 0.2rem 0.55rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .user-pill {
+      font-size: 0.85rem;
+      background: #1e293b;
+      padding: 0.4rem 0.85rem;
+      border-radius: 9999px;
+      border: 1px solid var(--surface-border);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+    }
+    .container {
+      max-width: 1280px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 1.5rem;
+      flex: 1;
+      width: 100%;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+    }
+    .card h2 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #fff;
+    }
+    .input-group {
+      margin-bottom: 1rem;
+    }
+    label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 0.4rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 0.75rem 0.9rem;
+      background: #0b0f19;
+      border: 1px solid var(--surface-border);
+      border-radius: 10px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+    button.btn-primary {
+      background: linear-gradient(135deg, #0284c7, #0ea5e9);
+      border: none;
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 0.5rem;
+    }
+    button.btn-primary:hover {
+      opacity: 0.95;
+      transform: translateY(-1px);
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .alert-card {
+      background: rgba(239, 68, 68, 0.08);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      padding: 1rem;
+      border-radius: 12px;
+      margin-top: 0.75rem;
+      font-size: 0.85rem;
+    }
+    .alert-card.safe {
+      background: rgba(16, 185, 129, 0.08);
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+    .chart-container {
+      position: relative;
+      height: 280px;
+      width: 100%;
+      margin-top: 1rem;
+    }
+    pre {
+      font-family: 'JetBrains Mono', monospace;
+      background: #080c14;
+      border: 1px solid var(--surface-border);
+      border-radius: 10px;
+      padding: 1rem;
+      font-size: 0.8rem;
+      color: #38bdf8;
+      overflow-x: auto;
+      max-height: 260px;
+    }
+    .badge-tag {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
+    .badge-critical { background: #ef4444; color: #fff; }
+    .badge-major { background: #f59e0b; color: #000; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <span>?? HELIX</span>
+    <span class="logo-badge">HEALTH OS v2.0</span>
+  </div>
+  <div class="user-pill" id="session-status">
+    <span class="status-dot"></span>
+    <span id="session-user-text">Clinical Engine: Online</span>
+  </div>
+</header>
+
+<main class="container">
+  <!-- LEFT COLUMN: Patient Setup & Records -->
+  <aside style="display: flex; flex-direction: column; gap: 1.5rem;">
+    <!-- Auth Card -->
+    <div class="card">
+      <h2>?? Session Auth</h2>
+      <div class="input-group">
+        <label>Patient Email</label>
+        <input type="email" id="auth-email" value="alex@hospital.org" />
+      </div>
+      <div class="input-group">
+        <label>Password</label>
+        <input type="password" id="auth-password" value="ClinicalPass2026!" />
+      </div>
+      <div style="display: flex; gap: 0.5rem;">
+        <button class="btn-primary" onclick="handleRegister()">Register</button>
+        <button class="btn-primary" style="background: #1e293b;" onclick="handleLogin()">Login</button>
+      </div>
+    </div>
+
+    <!-- Manual Biomarker Entry -->
+    <div class="card">
+      <h2>?? Ingest Lab Results</h2>
+      <div class="input-group">
+        <label>Fasting Glucose (mg/dL)</label>
+        <input type="number" id="bio-glucose" value="118.0" step="0.1" />
+      </div>
+      <div class="input-group">
+        <label>HbA1c (%)</label>
+        <input type="number" id="bio-hba1c" value="6.2" step="0.1" />
+      </div>
+      <div class="input-group">
+        <label>Total Cholesterol (mg/dL)</label>
+        <input type="number" id="bio-chol" value="215.0" step="0.1" />
+      </div>
+      <button class="btn-primary" onclick="submitBiomarkers()">Save Baseline Record</button>
+    </div>
+
+    <!-- Prescriptions -->
+    <div class="card">
+      <h2>?? Add Active Rx</h2>
+      <div class="input-group">
+        <label>Medication Name</label>
+        <input type="text" id="rx-name" placeholder="e.g. metformin, atorvastatin, warfarin" />
+      </div>
+      <div class="input-group">
+        <label>Dosage</label>
+        <input type="text" id="rx-dose" value="500mg" />
+      </div>
+      <div class="input-group">
+        <label>Frequency</label>
+        <input type="text" id="rx-freq" value="Once daily" />
+      </div>
+      <button class="btn-primary" onclick="addPrescription()">Verify & Record Drug</button>
+    </div>
+  </aside>
+
+  <!-- RIGHT COLUMN: Real-Time Dynamic Simulations -->
+  <section style="display: flex; flex-direction: column; gap: 1.5rem;">
+    <!-- Metabolic Twin -->
+    <div class="card">
+      <h2>?? 90-Day Metabolic Twin Simulation (Dynamic DB Coefficients)</h2>
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+        <div class="input-group">
+          <label>Target Daily Steps</label>
+          <input type="number" id="sim-steps" value="10000" />
+        </div>
+        <div class="input-group">
+          <label>Carb Reduction (%)</label>
+          <input type="number" id="sim-carb" value="25" />
+        </div>
+        <div class="input-group">
+          <label>Weekly Cardio (mins)</label>
+          <input type="number" id="sim-cardio" value="150" />
+        </div>
+      </div>
+      <button class="btn-primary" onclick="runSimulation()">Compute Metabolic Trajectory</button>
+      <div class="chart-container">
+        <canvas id="twinChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Grid: Drug Shield & Doctor Handoff -->
+    <div class="grid-2">
+      <!-- Drug Shield -->
+      <div class="card">
+        <h2>??? Drug Toxicity Shield</h2>
+        <button class="btn-primary" style="background:#1e293b; margin-bottom: 1rem;" onclick="checkInteractions()">Audit Current Prescriptions</button>
+        <div id="safety-output">
+          <p style="color: var(--text-muted); font-size: 0.85rem;">No contraindication audit run yet.</p>
+        </div>
+      </div>
+
+      <!-- Doctor Briefing -->
+      <div class="card">
+        <h2>?? Doctor Handoff One-Pager</h2>
+        <button class="btn-primary" style="background:#1e293b; margin-bottom: 1rem;" onclick="fetchDoctorBriefing()">Generate Clinical Summary</button>
+        <pre id="handoff-json">Click generate to load verified patient briefing...</pre>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+  let authToken = localStorage.getItem("helix_token") || "";
+  let currentUserId = localStorage.getItem("helix_user_id") || "";
+  let chartInstance = null;
+
+  function updateStatus(text, isAuthed = false) {
+    document.getElementById("session-user-text").innerText = text;
+    document.querySelector(".status-dot").style.background = isAuthed ? "var(--success)" : "var(--warning)";
+  }
+
+  async function handleRegister() {
+    const email = document.getElementById("auth-email").value;
+    const password = document.getElementById("auth-password").value;
+    const res = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, full_name: "Alex Miller", age: 34, gender: "Male" })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      authToken = data.access_token;
+      currentUserId = data.user_id;
+      localStorage.setItem("helix_token", authToken);
+      localStorage.setItem("helix_user_id", currentUserId);
+      updateStatus("Registered: " + email, true);
+      alert("Registered successfully!");
+    } else {
+      alert("Registration failed: " + JSON.stringify(data.detail));
+    }
+  }
+
+  async function handleLogin() {
+    const username = document.getElementById("auth-email").value;
+    const password = document.getElementById("auth-password").value;
+    const formData = new URLSearchParams();
+    formData.append("username", username);
+    formData.append("password", password);
+
+    const res = await fetch("/api/auth/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: formData
+    });
+    const data = await res.json();
+    if (res.ok) {
+      authToken = data.access_token;
+      currentUserId = data.user_id;
+      localStorage.setItem("helix_token", authToken);
+      localStorage.setItem("helix_user_id", currentUserId);
+      updateStatus("Active: " + username, true);
+      alert("Authenticated!");
+    } else {
+      alert("Login failed: " + JSON.stringify(data.detail));
+    }
+  }
+
+  async function submitBiomarkers() {
+    if (!authToken) return alert("Please login or register first.");
+    const biomarkers = {
+      fasting_glucose: parseFloat(document.getElementById("bio-glucose").value),
+      hba1c: parseFloat(document.getElementById("bio-hba1c").value),
+      cholesterol_total: parseFloat(document.getElementById("bio-chol").value)
+    };
+    const res = await fetch(`/api/records/${currentUserId}/manual`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${authToken}`
+      },
+      body: JSON.stringify({ biomarkers })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      alert("Biomarkers recorded without synthetic fallback!");
+    } else {
+      alert("Failed: " + JSON.stringify(data));
+    }
+  }
+
+  async function addPrescription() {
+    if (!authToken) return alert("Please login or register first.");
+    const drugName = document.getElementById("rx-name").value;
+    const dosage = document.getElementById("rx-dose").value;
+    const frequency = document.getElementById("rx-freq").value;
+
+    const formData = new URLSearchParams();
+    formData.append("drug_name", drugName);
+    formData.append("dosage", dosage);
+    formData.append("frequency", frequency);
+
+    const res = await fetch(`/api/safety/${currentUserId}/prescriptions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Authorization": `Bearer ${authToken}`
+      },
+      body: formData
+    });
+    if (res.ok) {
+      alert(`Recorded prescription: ${drugName}`);
+      checkInteractions();
+    } else {
+      alert("Failed to add prescription.");
+    }
+  }
+
+  async function runSimulation() {
+    if (!authToken) return alert("Please login or register first.");
+    const payload = {
+      horizon_days: 90,
+      daily_steps: parseInt(document.getElementById("sim-steps").value),
+      carb_reduction_pct: parseFloat(document.getElementById("sim-carb").value),
+      weekly_cardio_mins: parseInt(document.getElementById("sim-cardio").value)
+    };
+
+    const res = await fetch(`/api/twin/${currentUserId}/simulate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${authToken}`
+      },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      alert(data.error || "Simulation error. Save a baseline record first!");
+      return;
+    }
+
+    renderChart(data.projections);
+  }
+
+  function renderChart(projections) {
+    const ctx = document.getElementById("twinChart").getContext("2d");
+    const glucoseTrajectory = projections.fasting_glucose.trajectory;
+    const labels = glucoseTrajectory.map(t => `Day ${t.day}`);
+    const glucoseData = glucoseTrajectory.map(t => t.projected_value);
+
+    if (chartInstance) chartInstance.destroy();
+
+    chartInstance = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: labels,
+        datasets: [{
+          label: "Projected Fasting Glucose (mg/dL)",
+          data: glucoseData,
+          borderColor: "#0ea5e9",
+          backgroundColor: "rgba(14, 165, 233, 0.15)",
+          fill: true,
+          tension: 0.3,
+          borderWidth: 3,
+          pointBackgroundColor: "#38bdf8"
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { color: "#f3f4f6" } }
+        },
+        scales: {
+          x: { ticks: { color: "#9ca3af" }, grid: { color: "#1f293d" } },
+          y: { ticks: { color: "#9ca3af" }, grid: { color: "#1f293d" } }
+        }
+      }
+    });
+  }
+
+  async function checkInteractions() {
+    if (!authToken) return alert("Please login or register first.");
+    const res = await fetch(`/api/safety/${currentUserId}/interactions`, {
+      headers: { "Authorization": `Bearer ${authToken}` }
+    });
+    const data = await res.json();
+    const container = document.getElementById("safety-output");
+
+    if (data.total_violations === 0) {
+      container.innerHTML = `<div class="alert-card safe"><strong>? Safety Shield Clear</strong>: No active contraindications detected among current medications.</div>`;
+    } else {
+      container.innerHTML = data.interactions.map(item => `
+        <div class="alert-card">
+          <div style="display:flex; justify-content:space-between; margin-bottom:0.25rem;">
+            <strong>${item.drugs.join(" + ").toUpperCase()}</strong>
+            <span class="badge-tag ${item.severity === 'CRITICAL' ? 'badge-critical' : 'badge-major'}">${item.severity}</span>
+          </div>
+          <p>${item.clinical_effect}</p>
+          <p style="margin-top:0.3rem; color: #fca5a5;"><strong>Action:</strong> ${item.action_recommendation}</p>
+        </div>
+      `).join("");
+    }
+  }
+
+  async function fetchDoctorBriefing() {
+    if (!authToken) return alert("Please login or register first.");
+    const res = await fetch(`/api/handoff/${currentUserId}/summary`, {
+      headers: { "Authorization": `Bearer ${authToken}` }
+    });
+    const data = await res.json();
+    document.getElementById("handoff-json").innerText = JSON.stringify(data, null, 2);
+  }
+</script>
+</body>
+</html>
+"""
+
+# Ensure templates directory exists
+os.makedirs("templates", exist_ok=True)
+with open("templates/index.html", "w", encoding="utf-8") as f:
+    f.write(html_content)
+
+# Update main.py to serve the HTML file on route /
+with open("main.py", "r", encoding="utf-8") as f:
+    content = f.read()
+
+# Check and update imports for HTMLResponse
+if "from fastapi.responses import HTMLResponse" not in content:
+    content = "from fastapi.responses import HTMLResponse\n" + content
+
+# Replace the JSON read_root handler with the HTML UI renderer
+old_handler = """@app.get("/")
+def read_root():
+    return {
+        "service": settings.PROJECT_NAME,
+        "status": "online",
+        "docs_url": "/docs",
+        "redoc_url": "/redoc",
+        "api_prefix": "/api"
+    }"""
+
+new_handler = """@app.get("/", response_class=HTMLResponse)
+def read_root():
+    with open("templates/index.html", "r", encoding="utf-8") as f:
+        return f.read()"""
+
+if old_handler in content:
+    content = content.replace(old_handler, new_handler)
+else:
+    # Append if not replacing
+    content += "\n" + new_handler
+
+with open("main.py", "w", encoding="utf-8") as f:
+    f.write(content)
+
+print("Dashboard UI successfully integrated into route '/'")

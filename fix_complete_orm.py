@@ -1,4 +1,10 @@
-from sqlalchemy import Column, Integer, String, Boolean, Float, DateTime, Text, ForeignKey, JSON
+﻿import os
+
+print("🔧 Updating models/orm.py with full ORM schema...")
+
+os.makedirs("models", exist_ok=True)
+
+orm_code = '''from sqlalchemy import Column, Integer, String, Boolean, Float, DateTime, Text, ForeignKey, JSON
 from sqlalchemy.orm import declarative_base, relationship
 from datetime import datetime
 
@@ -36,18 +42,7 @@ class BiomarkerRegistryModel(Base):
     unit = Column(String(20), nullable=True)
     min_ref = Column(Float, nullable=True)
     max_ref = Column(Float, nullable=True)
-    loinc = Column(String(50), nullable=True)
-    loinc_code = Column(String(50), nullable=True)
-    display_name = Column(String(100), nullable=True)
     description = Column(Text, nullable=True)
-    patterns = Column(JSON, nullable=True)
-
-    def __init__(self, **kwargs):
-        # Dynamically set valid columns and ignore unexpected keyword arguments safely
-        cls_cols = {col.key for col in self.__table__.columns}
-        for key, val in kwargs.items():
-            if key in cls_cols:
-                setattr(self, key, val)
 
 class DrugRuleModel(Base):
     __tablename__ = "drug_rules"
@@ -65,31 +60,11 @@ class DrugRuleModel(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    def __init__(self, **kwargs):
-        cls_cols = {col.key for col in self.__table__.columns}
-        for key, val in kwargs.items():
-            if key in cls_cols:
-                setattr(self, key, val)
-
+# Alias for backwards compatibility if admin route references DrugInteractionRule
 DrugInteractionRule = DrugRuleModel
+'''
 
+with open("models/orm.py", "w", encoding="utf-8") as f:
+    f.write(orm_code)
 
-class SimulationCoefficient(Base):
-    __tablename__ = "simulation_coefficients"
-
-    id = Column(Integer, primary_key=True, index=True)
-    biomarker_name = Column(String, nullable=False, index=True)
-    target_biomarker = Column(String, nullable=False)
-    coefficient = Column(Float, default=0.0)
-    intercept = Column(Float, default=0.0)
-
-
-class HealthRecord(Base):
-    __tablename__ = "health_records"
-
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, index=True, nullable=False)
-    biomarker_name = Column(String, nullable=False, index=True)
-    value = Column(Float, nullable=False)
-    unit = Column(String, nullable=True)
-    recorded_at = Column(DateTime, nullable=True)
+print("✅ models/orm.py successfully updated with User, LabReport, BiomarkerRegistryModel, and DrugRuleModel!")

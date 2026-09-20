@@ -1,4 +1,11 @@
-from sqlalchemy import Column, Integer, String, Boolean, Float, DateTime, Text, ForeignKey, JSON
+﻿import os
+import glob
+
+print("🔧 Fixing database schema and syncing models...")
+
+# 1. Update models/orm.py cleanly
+os.makedirs("models", exist_ok=True)
+orm_code = '''from sqlalchemy import Column, Integer, String, Boolean, Float, DateTime, Text, ForeignKey, JSON
 from sqlalchemy.orm import declarative_base, relationship
 from datetime import datetime
 
@@ -36,18 +43,7 @@ class BiomarkerRegistryModel(Base):
     unit = Column(String(20), nullable=True)
     min_ref = Column(Float, nullable=True)
     max_ref = Column(Float, nullable=True)
-    loinc = Column(String(50), nullable=True)
-    loinc_code = Column(String(50), nullable=True)
-    display_name = Column(String(100), nullable=True)
     description = Column(Text, nullable=True)
-    patterns = Column(JSON, nullable=True)
-
-    def __init__(self, **kwargs):
-        # Dynamically set valid columns and ignore unexpected keyword arguments safely
-        cls_cols = {col.key for col in self.__table__.columns}
-        for key, val in kwargs.items():
-            if key in cls_cols:
-                setattr(self, key, val)
 
 class DrugRuleModel(Base):
     __tablename__ = "drug_rules"
@@ -65,31 +61,49 @@ class DrugRuleModel(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    def __init__(self, **kwargs):
-        cls_cols = {col.key for col in self.__table__.columns}
-        for key, val in kwargs.items():
-            if key in cls_cols:
-                setattr(self, key, val)
-
+# Compatibility alias
 DrugInteractionRule = DrugRuleModel
+'''
 
+with open("models/orm.py", "w", encoding="utf-8") as f:
+    f.write(orm_code)
+print("  ✅ models/orm.py updated.")
 
-class SimulationCoefficient(Base):
-    __tablename__ = "simulation_coefficients"
+# 2. Clear out existing stale SQLite database files
+db_files = glob.glob("*.db") + glob.glob("core/*.db") + glob.glob("data/*.db")
+for db_f in db_files:
+    try:
+        os.remove(db_f)
+        print(f"  🗑️ Removed outdated database: {db_f}")
+    except Exception as e:
+        print(f"  ⚠️ Could not remove {db_f}: {e}")
 
-    id = Column(Integer, primary_key=True, index=True)
-    biomarker_name = Column(String, nullable=False, index=True)
-    target_biomarker = Column(String, nullable=False)
-    coefficient = Column(Float, default=0.0)
-    intercept = Column(Float, default=0.0)
+# 3. Ensure database.py creates all tables on initialization
+os.makedirs("core", exist_ok=True)
+db_code = '''from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from models.orm import Base
 
+SQLALCHEMY_DATABASE_URL = "sqlite:///./helix.db"
 
-class HealthRecord(Base):
-    __tablename__ = "health_records"
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, index=True, nullable=False)
-    biomarker_name = Column(String, nullable=False, index=True)
-    value = Column(Float, nullable=False)
-    unit = Column(String, nullable=True)
-    recorded_at = Column(DateTime, nullable=True)
+# Re-create all tables matching ORM models
+Base.metadata.create_all(bind=engine)
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+'''
+
+with open("core/database.py", "w", encoding="utf-8") as f:
+    f.write(db_code)
+print("  ✅ core/database.py updated with table auto-creation.")
+
+print("\n🎉 Database schema synced! Try running pytest now.")

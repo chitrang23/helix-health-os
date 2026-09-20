@@ -1,4 +1,6 @@
-import pandas as pd
+﻿file_path = "services/velocity_engine.py"
+
+code = """import pandas as pd
 import numpy as np
 from sklearn.linear_model import Ridge
 from typing import List, Dict, Any, Optional
@@ -70,3 +72,9 @@ class VelocityEngine:
             "trajectory": trajectory,
             "confidence_score": 0.88
         }
+"""
+
+with open(file_path, "w", encoding="utf-8") as f:
+    f.write(code)
+
+print("✅ Step 4: Updated services/velocity_engine.py with Lifestyle Factors & Baseline Smoothing!")

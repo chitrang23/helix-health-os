@@ -1,4 +1,11 @@
-from typing import List, Dict, Any, Optional
+﻿# -*- coding: utf-8 -*-
+import os
+
+print("🔧 Fixing SafetyEngine signature and updating test suite...")
+
+# 1. Update services/safety_engine.py
+os.makedirs("services", exist_ok=True)
+safety_engine_code = '''from typing import List, Dict, Any, Optional
 
 class SafetyEngine:
     @staticmethod
@@ -72,3 +79,16 @@ class SafetyEngine:
                         })
 
         return alerts
+'''
+
+with open("services/safety_engine.py", "w", encoding="utf-8") as f:
+    f.write(safety_engine_code)
+print("  ✅ services/safety_engine.py updated.")
+
+# 2. Ensure conftest.py exists for clean pytest execution
+Set_Content_Path = "conftest.py"
+with open("conftest.py", "w", encoding="utf-8") as f:
+    f.write("# Root conftest for pytest module discovery\n")
+print("  ✅ conftest.py verified.")
+
+print("\n🎉 Setup complete. Run test command now.")

@@ -1,0 +1,684 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Helix Health OS — Clinical Diagnostic Intelligence</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-void: #070B14;
+            --surface: #0E1626;
+            --surface-card: #131F36;
+            --border-glow: #1E2D4A;
+            --brand-emerald: #10B981;
+            --brand-purple: #8B5CF6;
+            --brand-cyan: #06B6D4;
+        }
+        body { background-color: var(--bg-void); color: #F1F5F9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; min-height: 100vh; }
+        .card { background-color: var(--surface); border: 1px solid var(--border-glow); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .hero-banner { background: linear-gradient(135deg, #064E3B 0%, #0E1626 60%, #142036 100%); border: 1px solid rgba(16,185,129,0.35); border-radius: 18px; }
+        .btn-helix { background: linear-gradient(135deg, #10B981, #059669); color: #fff; font-weight: 700; border: none; border-radius: 10px; }
+        .btn-helix:hover { opacity: 0.95; color: #fff; box-shadow: 0 0 20px rgba(16,185,129,0.3); }
+        .btn-lang { background: #142036; color: #94A3B8; border: 1px solid var(--border-glow); font-weight: 600; border-radius: 8px; }
+        .btn-lang.active { background: var(--brand-emerald); color: #fff; border-color: var(--brand-emerald); }
+        .form-control { background-color: #080D1A; border: 1px solid var(--border-glow); color: #fff; }
+        .form-control:focus { background-color: #080D1A; border-color: var(--brand-emerald); color: #fff; box-shadow: none; }
+        
+        .badge-status { padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 11px; text-transform: uppercase; }
+        .status-warn { background-color: rgba(245,158,11,0.15); color: #FBBF24; border: 1px solid rgba(245,158,11,0.4); }
+        .status-danger { background-color: rgba(239,68,68,0.15); color: #F87171; border: 1px solid rgba(239,68,68,0.4); }
+        .status-good { background-color: rgba(16,185,129,0.15); color: #34D399; border: 1px solid rgba(16,185,129,0.4); }
+        
+        .nav-tabs .nav-link { color: #94A3B8; border: none; border-bottom: 2px solid transparent; font-weight: 700; }
+        .nav-tabs .nav-link.active { background: transparent; color: var(--brand-emerald); border-bottom: 3px solid var(--brand-emerald); }
+        
+        .timeline-box { position: relative; border-left: 2px solid #10B981; padding-left: 20px; margin-bottom: 20px; }
+        .timeline-dot { position: absolute; left: -9px; top: 0; width: 16px; height: 16px; border-radius: 50%; background: #10B981; }
+        .treatment-card { background: var(--surface-card); border: 1px solid var(--border-glow); border-radius: 12px; padding: 15px; }
+        .guideline-badge { font-size: 10px; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); color: #38BDF8; padding: 2px 8px; border-radius: 6px; }
+
+        .breath-circle {
+            width: 150px; height: 150px; border-radius: 50%;
+            background: radial-gradient(circle, #8B5CF6 0%, #3B0764 100%);
+            display: flex; align-items: center; justify-content: center;
+            margin: auto; font-weight: 800; color: #fff; text-align: center;
+            transition: all 4s ease-in-out;
+            box-shadow: 0 0 30px rgba(139,92,246,0.4);
+        }
+        .expand-circle { transform: scale(1.35); box-shadow: 0 0 50px rgba(16,185,129,0.7); background: radial-gradient(circle, #10B981 0%, #064E3B 100%); }
+    </style>
+</head>
+<body class="py-4">
+
+<div class="container-fluid px-lg-5">
+    <!-- Top Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom border-secondary border-opacity-25 flex-wrap gap-3">
+        <div class="d-flex align-items-center gap-3">
+            <span class="p-3 rounded-4 bg-success bg-opacity-25 text-success fs-3 shadow"><i class="fa-solid fa-dna"></i></span>
+            <div>
+                <h3 class="text-white fw-bold mb-0">HELIX HEALTH</h3>
+                <p class="text-secondary small mb-0" id="tag-sub">Enterprise Decision Support Platform: Multi-Hospital Telemetry & Grounded Twin</p>
+            </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-3">
+            <!-- 3-Language Switcher -->
+            <div class="d-flex gap-1 bg-dark p-1 rounded-3 border border-secondary border-opacity-50">
+                <button class="btn btn-sm btn-lang active" onclick="setLanguage('en')">English</button>
+                <button class="btn btn-sm btn-lang" onclick="setLanguage('hi')">हिन्दी</button>
+                <button class="btn btn-sm btn-lang" onclick="setLanguage('mr')">मराठी</button>
+            </div>
+            
+            <div id="auth-container"></div>
+        </div>
+    </div>
+
+    <!-- 1. SIGN IN / SIGNUP CARD -->
+    <div id="auth-screen" class="row justify-content-center my-5">
+        <div class="col-md-5">
+            <div class="card p-4 shadow-lg border-success border-opacity-50">
+                <div class="text-center mb-4">
+                    <span class="p-3 rounded-circle bg-success bg-opacity-25 text-success fs-3 d-inline-block mb-2"><i class="fa-solid fa-user-lock"></i></span>
+                    <h4 class="text-white fw-bold">Sign In to Your Health Timeline</h4>
+                    <p class="text-secondary small">Access hospital records, dynamic metabolic twin, and clinical summaries.</p>
+                </div>
+
+                <ul class="nav nav-pills nav-fill mb-3" id="authTab" role="tablist">
+                    <li class="nav-item"><button class="nav-link active btn-sm" data-bs-toggle="pill" data-bs-target="#tab-signin">Sign In</button></li>
+                    <li class="nav-item"><button class="nav-link btn-sm" data-bs-toggle="pill" data-bs-target="#tab-signup">Register</button></li>
+                </ul>
+
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="tab-signin">
+                        <label class="small text-secondary fw-bold mb-1">EMAIL ADDRESS</label>
+                        <input type="email" id="in-email" class="form-control mb-3" placeholder="name@example.com" value="alex@hospital.org">
+                        <label class="small text-secondary fw-bold mb-1">PASSWORD</label>
+                        <input type="password" id="in-pw" class="form-control mb-4" placeholder="••••••••" value="ClinicalPass2026!">
+                        <button class="btn btn-helix w-100 py-2 fw-bold" onclick="login()"><i class="fa-solid fa-right-to-bracket me-2"></i>Sign In</button>
+                    </div>
+
+                    <div class="tab-pane fade" id="tab-signup">
+                        <label class="small text-secondary fw-bold mb-1">FULL NAME</label>
+                        <input type="text" id="up-name" class="form-control mb-2" placeholder="e.g. Alex Miller" value="Alex Miller">
+                        <label class="small text-secondary fw-bold mb-1">EMAIL</label>
+                        <input type="email" id="up-email" class="form-control mb-2" placeholder="name@example.com" value="alex@hospital.org">
+                        <label class="small text-secondary fw-bold mb-1">PASSWORD</label>
+                        <input type="password" id="up-pw" class="form-control mb-2" placeholder="Create a password" value="ClinicalPass2026!">
+                        <button class="btn btn-helix w-100 py-2 fw-bold mt-3" onclick="register()"><i class="fa-solid fa-user-plus me-2"></i>Create Health Account</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. MAIN APPLICATION WORKSPACE -->
+    <div id="dashboard-screen" class="d-none">
+        <ul class="nav nav-tabs mb-4" id="mainTab" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#view-command"><i class="fa-solid fa-gauge-high me-2 text-success"></i><span id="tab-cmd-lbl">Dynamic Lab Dashboard</span></button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#view-twin"><i class="fa-solid fa-vr-cardboard me-2 text-primary"></i><span id="tab-twin-lbl">90-Day Metabolic Twin</span></button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#view-doctor"><i class="fa-solid fa-user-doctor me-2 text-info"></i><span id="tab-doc-lbl">Doctor Handoff & HL7 FHIR</span></button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#view-stress"><i class="fa-solid fa-brain me-2 text-purple"></i><span id="tab-stress-lbl">Stress & Neuro-Recovery Studio</span></button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#view-symptoms"><i class="fa-solid fa-stethoscope me-2 text-warning"></i><span id="tab-symp-lbl">Symptom Checker</span></button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            <!-- TAB 1: LAB DASHBOARD -->
+            <div class="tab-pane fade show active" id="view-command">
+                <div class="hero-banner p-4 mb-4 shadow">
+                    <div class="row align-items-center g-3">
+                        <div class="col-lg-7">
+                            <span class="badge bg-success bg-opacity-25 text-success mb-2 px-3 py-1 border border-success border-opacity-50"><i class="fa-solid fa-shield-halved me-1"></i> <span id="lbl-status-badge">Deterministic Double-Verification Active</span></span>
+                            <h3 class="text-white fw-bold mb-1" id="dash-greeting">Welcome to Helix</h3>
+                            <p class="text-light text-opacity-75 small mb-3">Upload your hospital reports or add parameters manually. Helix automatically compiles clinical cards, generates longitudinal trend curves, and audits multi-drug contraindications.</p>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-helix px-4 py-2" data-bs-toggle="modal" data-bs-target="#uploadModal"><i class="fa-solid fa-cloud-arrow-up me-1"></i> <span id="lbl-btn-upload">Upload Medical Report</span></button>
+                            </div>
+                        </div>
+                        <div class="col-lg-5">
+                            <div class="card bg-dark bg-opacity-75 p-3 border-secondary border-opacity-50">
+                                <div class="text-secondary small fw-bold mb-1"><i class="fa-solid fa-hospital-user text-primary me-1"></i> LATEST REPORT SOURCE:</div>
+                                <div class="text-white fw-bold" id="latest-hosp">Metropolis Healthcare</div>
+                                <div class="text-secondary small" id="latest-date">Date: N/A</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <h5 class="text-white fw-bold mb-3"><i class="fa-solid fa-list-check text-success me-2"></i> <span id="lbl-cards-heading">Tests Extracted From Your Uploaded Report:</span></h5>
+                <div class="row g-3 mb-4" id="dynamic-cards-grid"></div>
+
+                <div class="card p-4 mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-1 flex-wrap">
+                        <h5 class="text-white fw-bold mb-0"><i class="fa-solid fa-chart-line text-primary me-2"></i> <span id="lbl-chart-title">Longitudinal Tracking of Your Tests Over Time</span></h5>
+                    </div>
+                    <p class="text-secondary small mb-3">Plots chronological progression curves for each biomarker across your hospital visits.</p>
+                    <div class="p-3 rounded bg-dark border border-secondary border-opacity-25" style="position: relative; height: 320px;">
+                        <canvas id="userChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: METABOLIC TWIN -->
+            <div class="tab-pane fade" id="view-twin">
+                <div class="card p-4 mb-4">
+                    <h5 class="text-white fw-bold mb-1"><i class="fa-solid fa-vr-cardboard text-primary me-2"></i> <span id="lbl-twin-heading">90-Day What-If Metabolic Twin Simulator</span></h5>
+                    <p class="text-secondary small mb-4" id="lbl-twin-sub">Directly linked to your uploaded lab tests. Adjust your daily habits to forecast exact 90-day biological recovery.</p>
+                    
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-6">
+                            <div class="p-3 bg-dark rounded border border-secondary border-opacity-50 mb-3">
+                                <label class="small text-secondary fw-bold" id="lbl-ex-slider">WEEKLY EXERCISE & RESISTANCE TRAINING (DAYS/WEEK)</label>
+                                <input type="range" class="form-range mb-3" id="sim-ex" min="0" max="7" value="4" oninput="runLiveTwinSimulation()">
+                                <div class="text-end small text-success fw-bold"><span id="ex-val">4</span> Days / Week</div>
+
+                                <label class="small text-secondary fw-bold mt-3" id="lbl-sg-slider">DAILY CALORIC DEFICIT & SUGAR REDUCTION</label>
+                                <input type="range" class="form-range mb-3" id="sim-sg" min="0" max="100" value="50" oninput="runLiveTwinSimulation()">
+                                <div class="text-end small text-success fw-bold"><span id="sg-val">50%</span> Reduction (~350 kcal/day deficit)</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 bg-dark rounded border border-success border-opacity-50 h-100">
+                                <div class="text-success fw-bold small mb-2"><i class="fa-solid fa-bullseye me-1"></i> <span id="lbl-twin-proj-title">PROJECTED 90-DAY RECOVERY TIED TO REPORT BASELINES:</span></div>
+                                <div class="row text-center g-2 small" id="twin-projections-grid"></div>
+                                <div class="text-info small mt-3" id="sim-summary">Dynamic physiological calculation based on your latest uploaded lab parameters.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: DOCTOR HANDOFF -->
+            <div class="tab-pane fade" id="view-doctor">
+                <div class="card p-4 mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                        <div>
+                            <h5 class="text-white fw-bold mb-1"><i class="fa-solid fa-user-doctor text-primary me-2"></i> <span id="lbl-doc-heading">Doctor 1-Page Summary & HL7 FHIR Interoperability</span></h5>
+                            <p class="text-secondary small mb-0" id="lbl-doc-sub">A concise clinical briefing and standards-compliant HL7 FHIR JSON bundle for hospital EMR integration.</p>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-success" onclick="exportFhir()"><i class="fa-solid fa-file-code me-1"></i> Export HL7 FHIR JSON</button>
+                            <button class="btn btn-sm btn-outline-light" onclick="window.print()"><i class="fa-solid fa-print me-1"></i> <span id="lbl-btn-print">Print Summary</span></button>
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-dark rounded border border-secondary border-opacity-50 mb-4">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="text-secondary small">PATIENT NAME</div>
+                                <div class="text-white fw-bold" id="doc-patient-name">—</div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-secondary small">CONNECTED HOSPITALS</div>
+                                <div class="text-white fw-bold" id="doc-hosp-summary">—</div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-secondary small">LATEST EVALUATION</div>
+                                <div class="text-success fw-bold" id="doc-eval-date">—</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h6 class="text-white fw-bold mb-2"><i class="fa-solid fa-shield-virus text-info me-2"></i> Dynamic Drug-Biomarker Toxicity Shield:</h6>
+                    <div class="p-3 bg-dark rounded border border-info border-opacity-50 mb-4" id="drug-shield-container"></div>
+
+                    <h6 class="text-white fw-bold mb-2"><i class="fa-solid fa-clipboard-question text-warning me-2"></i> <span id="lbl-doc-points-title">Questions to Ask Your Doctor in Your Next Visit:</span></h6>
+                    <div class="p-3 bg-dark rounded border border-warning border-opacity-50 mb-4" id="doctor-questions-container"></div>
+                </div>
+            </div>
+
+            <!-- TAB 4: STRESS STUDIO -->
+            <div class="tab-pane fade" id="view-stress">
+                <div class="card p-4 mb-4">
+                    <h5 class="text-white fw-bold mb-1"><i class="fa-solid fa-brain text-warning me-2"></i> Biomarker-Grounded Neuro-Stress Engine</h5>
+                    <p class="text-secondary small mb-3">Calculates systemic cortisol and allostatic load by linking sleep/stress parameters to your verified lab tests.</p>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="small text-secondary fw-bold">NIGHTLY SLEEP DURATION (HOURS)</label>
+                            <input type="range" class="form-range mb-2" id="st-sleep" min="4" max="10" step="0.5" value="6.5" oninput="document.getElementById('sl-val').innerText = this.value">
+                            <div class="text-end small text-success fw-bold"><span id="sl-val">6.5</span> Hours</div>
+
+                            <label class="small text-secondary fw-bold mt-2">WORK / COGNITIVE STRESS (1-10)</label>
+                            <input type="range" class="form-range mb-2" id="st-stress" min="1" max="10" value="7" oninput="document.getElementById('st-val').innerText = this.value">
+                            <div class="text-end small text-warning fw-bold">Level <span id="st-val">7</span> / 10</div>
+
+                            <button class="btn btn-helix w-100 mt-3" onclick="computeDynamicStress()"><i class="fa-solid fa-atom me-1"></i> Assess Biological Neuro-Stress</button>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 bg-dark rounded border border-secondary border-opacity-50 h-100 small" id="stress-dynamic-result">
+                                <div class="text-secondary">Click 'Assess Biological Neuro-Stress' to compute biomarker-linked allostatic burden and vagal recovery index...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 5: SYMPTOM CHECKER -->
+            <div class="tab-pane fade" id="view-symptoms">
+                <div class="card p-4 mb-4">
+                    <h5 class="text-white fw-bold mb-1"><i class="fa-solid fa-stethoscope text-warning me-2"></i> <span id="lbl-symp-head">Check How Your Uploaded Report Explains Your Symptoms</span></h5>
+                    <p class="text-secondary small mb-4">Enter any symptom you are experiencing to evaluate physiological correlations with your blood tests.</p>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-9">
+                            <input type="text" id="symp-input" class="form-control py-2" placeholder="e.g. feeling tired, extreme thirst, dizziness, joint pain" value="Feeling tired, thirsty and dizzy">
+                        </div>
+                        <div class="col-md-3">
+                            <button class="btn btn-helix w-100 py-2" onclick="correlateSymptoms()"><i class="fa-solid fa-wand-magic-sparkles me-1"></i> Correlate with Report</button>
+                        </div>
+                    </div>
+                    <div class="p-3 bg-dark rounded border border-secondary border-opacity-50" id="symp-result-box">
+                        <div class="text-secondary small">// Click above to analyze how your latest lab results relate to your symptoms...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- UPLOAD MODAL -->
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content card p-4">
+            <h4 class="text-white fw-bold mb-2"><i class="fa-solid fa-cloud-arrow-up text-success me-2"></i>Upload Medical Report</h4>
+            <p class="text-secondary small mb-3">Paste report text below. Helix will extract all test values dynamically into your database.</p>
+            
+            <label class="small text-secondary fw-bold mb-1">HOSPITAL / CLINIC NAME</label>
+            <input type="text" id="up-hosp" class="form-control mb-2" value="Metropolis Healthcare">
+            
+            <label class="small text-secondary fw-bold mb-1">REPORT COLLECTION DATE</label>
+            <input type="date" id="up-date" class="form-control mb-3" value="2026-08-19">
+            
+            <div class="p-3 bg-dark rounded border border-secondary border-opacity-50 text-center mb-3">
+                <textarea id="up-text" class="form-control font-monospace" rows="5">METROPOLIS HEALTHCARE REPORT
+Fasting Blood Sugar: 118.0 mg/dL
+HbA1c: 6.2 %
+LDL Cholesterol: 142.0 mg/dL
+Vitamin D: 16.5 ng/mL
+Hemoglobin: 13.0 g/dL
+Serum Creatinine: 1.1 mg/dL</textarea>
+            </div>
+
+            <button class="btn btn-helix w-100 py-2" onclick="uploadReport()"><i class="fa-solid fa-bolt me-1"></i> Read & Explain My Report</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    let activeUser = JSON.parse(localStorage.getItem('helix_user')) || null;
+    let authToken = localStorage.getItem('helix_token') || null;
+    let currentLang = 'en';
+    let cachedSummaryData = null;
+    let chartInstance = null;
+
+    async function authFetch(url, options = {}) {
+        const headers = Object.assign({}, options.headers || {});
+        if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+        const res = await fetch(url, Object.assign({}, options, { headers }));
+        if (res.status === 401) {
+            logoutUser();
+            throw new Error('Session expired');
+        }
+        return res;
+    }
+
+    function updateAuthHeader() {
+        const container = document.getElementById('auth-container');
+        if (activeUser) {
+            container.innerHTML = `
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-dark border border-secondary text-white dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="fa-solid fa-user-circle text-success me-1"></i> ${activeUser.name}
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
+                        <li><a class="dropdown-item small text-danger" href="#" onclick="logoutUser()"><i class="fa-solid fa-power-off me-2"></i>Sign Out</a></li>
+                    </ul>
+                </div>
+            `;
+        } else {
+            container.innerHTML = '';
+        }
+    }
+
+    function renderDynamicCards(cards) {
+        const grid = document.getElementById('dynamic-cards-grid');
+        grid.innerHTML = '';
+        const lang = currentLang;
+
+        if (!cards || cards.length === 0) {
+            grid.innerHTML = '<div class="col-12 text-secondary small p-3">No reports found. Click "Upload Medical Report" above to ingest lab records.</div>';
+            return;
+        }
+
+        cards.forEach(c => {
+            const col = document.createElement('div');
+            col.className = 'col-md-4';
+            col.innerHTML = `
+                <div class="card p-3 h-100 ${c.is_panic ? 'border-danger shadow-lg' : ''}">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <strong class="text-white">${c.title[lang] || c.key}</strong>
+                        <span class="badge-status status-${c.status_code}">${c.status[lang]}</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <div class="fs-4 fw-bold text-white">${c.value}</div>
+                        <span class="badge bg-success bg-opacity-25 text-success font-monospace" style="font-size: 10px;"><i class="fa-solid fa-circle-check me-1"></i>Verified</span>
+                    </div>
+                    <div class="d-flex gap-1 flex-wrap mb-2">
+                        <span class="guideline-badge">${c.guideline}</span>
+                        <span class="badge bg-secondary font-monospace" style="font-size: 10px;">LOINC: ${c.loinc}</span>
+                    </div>
+                    <div class="text-secondary small mb-2"><i class="fa-solid fa-circle-info text-info me-1"></i>${c.what[lang]}</div>
+                    <p class="text-light text-opacity-75 small mb-3">${c.summary[lang]}</p>
+                    <div class="text-success small mt-auto"><i class="fa-solid fa-lightbulb me-1"></i>${c.tip[lang]}</div>
+                </div>
+            `;
+            grid.appendChild(col);
+        });
+    }
+
+    function renderDoctorSummary(d) {
+        const lang = currentLang;
+        document.getElementById('doc-patient-name').innerText = `${d.user.name} (${d.user.age}y / ${d.user.gender})`;
+        document.getElementById('doc-hosp-summary').innerText = d.hospitals_connected.join(', ') || "No hospital visits logged";
+        document.getElementById('doc-eval-date').innerText = d.latest_date;
+
+        const shieldBox = document.getElementById('drug-shield-container');
+        shieldBox.innerHTML = '';
+        if (d.drug_shields && d.drug_shields.length > 0) {
+            d.drug_shields.forEach(s => {
+                const div = document.createElement('div');
+                div.className = `p-2 mb-2 rounded bg-${s.severity === 'danger' ? 'danger' : 'warning'} bg-opacity-10 border border-${s.severity === 'danger' ? 'danger' : 'warning'} border-opacity-50`;
+                div.innerHTML = `
+                    <div class="d-flex justify-content-between">
+                        <strong class="text-white small"><i class="fa-solid fa-capsules me-1"></i> ${s.drug}</strong>
+                        <span class="badge bg-${s.severity === 'danger' ? 'danger' : 'warning'}">${s.severity.toUpperCase()}</span>
+                    </div>
+                    <div class="text-light small mt-1">${s.warning}</div>
+                `;
+                shieldBox.appendChild(div);
+            });
+        } else {
+            shieldBox.innerHTML = '<div class="text-secondary small">No pharmacological contraindications detected.</div>';
+        }
+
+        const container = document.getElementById('doctor-questions-container');
+        container.innerHTML = '';
+        if (!d.doctor_questions || d.doctor_questions.length === 0) {
+            container.innerHTML = '<div class="text-secondary small">No urgent clinical flags found. All tests stable.</div>';
+            return;
+        }
+
+        d.doctor_questions.forEach(q => {
+            const div = document.createElement('div');
+            div.className = 'p-2 mb-2 rounded bg-secondary bg-opacity-10 border border-secondary border-opacity-25';
+            div.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <strong class="text-warning small">${q.biomarker}</strong>
+                    <span class="badge bg-danger bg-opacity-25 text-danger small">${q.finding}</span>
+                </div>
+                <div class="text-light small"><i class="fa-solid fa-circle-arrow-right text-success me-1"></i> ${q.question[lang]}</div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function renderDynamicChart(chartData) {
+        const ctx = document.getElementById('userChart').getContext('2d');
+        if (chartInstance) chartInstance.destroy();
+        chartInstance = new Chart(ctx, {
+            type: 'line',
+            data: { labels: chartData.dates, datasets: chartData.datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: '#94A3B8' } } },
+                scales: {
+                    x: { ticks: { color: '#94A3B8' }, grid: { color: '#1E2D4A' } },
+                    y: { ticks: { color: '#94A3B8' }, grid: { color: '#1E2D4A' } }
+                }
+            }
+        });
+    }
+
+    function runLiveTwinSimulation() {
+        const exDays = parseInt(document.getElementById('sim-ex').value);
+        const sgPct = parseInt(document.getElementById('sim-sg').value);
+        document.getElementById('ex-val').innerText = exDays;
+        document.getElementById('sg-val').innerText = sgPct + '%';
+
+        const grid = document.getElementById('twin-projections-grid');
+        grid.innerHTML = '';
+
+        if (!cachedSummaryData || !cachedSummaryData.latest_biomarkers || Object.keys(cachedSummaryData.latest_biomarkers).length === 0) {
+            grid.innerHTML = '<div class="col-12 text-secondary small p-3">Upload a medical report first to calibrate the simulator.</div>';
+            return;
+        }
+
+        const b = cachedSummaryData.latest_biomarkers;
+        const deficitKcal = (sgPct / 100) * 500 + (exDays * 40);
+
+        for (let k in b) {
+            const baseline = b[k];
+            let projected = baseline;
+            let unit = "";
+
+            if (k === "fasting_glucose") {
+                const reduction = (exDays * 2.5) + ((deficitKcal / 500) * 12.0);
+                projected = Math.max(75.0, (baseline - reduction)).toFixed(1);
+                unit = "mg/dL";
+            } else if (k === "hba1c") {
+                const reduction = (exDays * 0.09) + ((deficitKcal / 500) * 0.45);
+                projected = Math.max(4.6, (baseline - reduction)).toFixed(2);
+                unit = "%";
+            } else if (k === "ldl_cholesterol") {
+                const reduction = (exDays * 3.2) + ((deficitKcal / 500) * 18.0);
+                projected = Math.max(70.0, (baseline - reduction)).toFixed(1);
+                unit = "mg/dL";
+            } else {
+                continue;
+            }
+
+            const col = document.createElement('div');
+            col.className = 'col-md-6 mb-2';
+            col.innerHTML = `
+                <div class="p-2 rounded bg-secondary bg-opacity-10 border border-secondary border-opacity-25 text-start">
+                    <div class="d-flex justify-content-between">
+                        <strong class="text-white small">${k.replace('_', ' ').toUpperCase()}</strong>
+                        <span class="badge bg-secondary">${unit}</span>
+                    </div>
+                    <div class="text-light my-1 fs-6">Baseline: <strong>${baseline}</strong> ➔ <span class="text-success fw-bold">${projected}</span></div>
+                </div>
+            `;
+            grid.appendChild(col);
+        }
+    }
+
+    async function computeDynamicStress() {
+        if (!activeUser) return;
+        const sl = document.getElementById('st-sleep').value;
+        const st = document.getElementById('st-stress').value;
+
+        const fd = new FormData();
+        fd.append('user_id', activeUser.id);
+        fd.append('sleep_hours', sl);
+        fd.append('work_stress', st);
+        fd.append('pre_pulse', 84);
+        fd.append('post_pulse', 72);
+
+        const res = await authFetch('/api/v1/stress/assess-dynamic', { method: 'POST', body: fd });
+        const d = await res.json();
+        const lang = currentLang;
+
+        document.getElementById('stress-dynamic-result').innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <strong class="text-warning fs-6">${d.status[lang]}</strong>
+                <span class="badge bg-purple">Allostatic Score: ${d.allostatic_score}</span>
+            </div>
+            <div class="text-success mb-1">Vagal Recovery Index: <strong>${d.vagal_recovery_index}%</strong></div>
+            <div class="text-info">Pulse Delta: <strong>-${d.pulse_delta} BPM</strong> | Salivary Cortisol Drop: <strong>-${d.estimated_cortisol_drop_nmol} nmol/L</strong></div>
+        `;
+    }
+
+    async function correlateSymptoms() {
+        const query = document.getElementById('symp-input').value;
+        const fd = new FormData();
+        fd.append('symptom', query);
+        fd.append('user_id', activeUser.id);
+
+        const res = await authFetch('/api/v1/symptoms/correlate', { method: 'POST', body: fd });
+        const d = await res.json();
+        const lang = currentLang;
+
+        let html = '<h6 class="text-warning fw-bold small mb-3">BIOLOGICAL REASONING FROM LAB TESTS:</h6>';
+        d.correlations.forEach(c => {
+            const expText = typeof c.explanation === 'object' ? (c.explanation[lang] || c.explanation['en']) : c.explanation;
+            html += `
+                <div class="p-3 mb-3 rounded bg-dark border border-secondary border-opacity-50">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong class="text-white fs-6">${c.biomarker} (${c.value})</strong>
+                        <span class="badge-status status-${c.status_code}">${c.status_label[lang] || c.status_label}</span>
+                    </div>
+                    <p class="text-light text-opacity-75 small mb-1">${expText}</p>
+                    <div class="text-secondary small font-monospace">${c.source}</div>
+                </div>
+            `;
+        });
+        document.getElementById('symp-result-box').innerHTML = html;
+    }
+
+    async function exportFhir() {
+        const res = await authFetch(`/api/v1/export/fhir/${activeUser.id}`);
+        const data = await res.json();
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `helix-fhir-bundle-${activeUser.id}.json`;
+        a.click();
+    }
+
+    function setLanguage(lang) {
+        currentLang = lang;
+        document.querySelectorAll('.btn-lang').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+        if (cachedSummaryData) {
+            renderDynamicCards(cachedSummaryData.dynamic_cards);
+            renderDoctorSummary(cachedSummaryData);
+        }
+    }
+
+    async function loadDashboard() {
+        updateAuthHeader();
+        if (!activeUser) {
+            document.getElementById('auth-screen').classList.remove('d-none');
+            document.getElementById('dashboard-screen').classList.add('d-none');
+            return;
+        }
+
+        document.getElementById('auth-screen').classList.add('d-none');
+        document.getElementById('dashboard-screen').classList.remove('d-none');
+        document.getElementById('dash-greeting').innerText = `Welcome, ${activeUser.name}`;
+
+        try {
+            const res = await authFetch(`/api/v1/user/summary/${activeUser.id}`);
+            if (!res.ok) { logoutUser(); return; }
+            const d = await res.json();
+            cachedSummaryData = d;
+
+            document.getElementById('latest-hosp').innerText = d.latest_hospital;
+            document.getElementById('latest-date').innerText = "Date: " + d.latest_date;
+
+            renderDynamicCards(d.dynamic_cards);
+            renderDoctorSummary(d);
+            renderDynamicChart(d.chart_data);
+            runLiveTwinSimulation();
+        } catch (e) {
+            console.error("Dashboard error:", e);
+        }
+    }
+
+    async function login() {
+        const em = document.getElementById('in-email').value;
+        const pw = document.getElementById('in-pw').value;
+        const fd = new FormData();
+        fd.append('email', em);
+        fd.append('password', pw);
+
+        const res = await fetch('/api/v1/auth/login', { method: 'POST', body: fd });
+        const d = await res.json();
+        if (!res.ok) { alert(d.detail || "Login failed"); return; }
+
+        activeUser = { id: d.user_id, name: d.full_name, email: d.email };
+        authToken = d.access_token;
+        localStorage.setItem('helix_user', JSON.stringify(activeUser));
+        localStorage.setItem('helix_token', authToken);
+        await loadDashboard();
+    }
+
+    async function register() {
+        const fn = document.getElementById('up-name').value;
+        const em = document.getElementById('up-email').value;
+        const pw = document.getElementById('up-pw').value;
+
+        const fd = new FormData();
+        fd.append('full_name', fn);
+        fd.append('email', em);
+        fd.append('password', pw);
+
+        const res = await fetch('/api/v1/auth/register', { method: 'POST', body: fd });
+        const d = await res.json();
+        if (!res.ok) { alert(d.detail || "Registration failed"); return; }
+
+        activeUser = { id: d.user_id, name: d.full_name, email: d.email };
+        authToken = d.access_token;
+        localStorage.setItem('helix_user', JSON.stringify(activeUser));
+        localStorage.setItem('helix_token', authToken);
+        await loadDashboard();
+    }
+
+    function logoutUser() {
+        localStorage.removeItem('helix_user');
+        localStorage.removeItem('helix_token');
+        activeUser = null;
+        authToken = null;
+        location.reload();
+    }
+
+    async function uploadReport() {
+        if (!activeUser) return;
+        const hosp = document.getElementById('up-hosp').value;
+        const rDate = document.getElementById('up-date').value;
+        const text = document.getElementById('up-text').value;
+
+        const fd = new FormData();
+        fd.append('user_id', activeUser.id);
+        fd.append('hospital_name', hosp);
+        fd.append('record_date', rDate);
+        fd.append('raw_ocr_text', text);
+
+        const res = await authFetch('/api/v1/pipeline/upload-report', { method: 'POST', body: fd });
+        const d = await res.json();
+        if (!res.ok) { alert(d.detail || "Upload failed"); return; }
+
+        bootstrap.Modal.getInstance(document.getElementById('uploadModal')).hide();
+        await loadDashboard();
+        alert("Report processed and dynamic twin calibrated!");
+    }
+
+    window.onload = function() { loadDashboard(); };
+</script>
+</body>
+</html>

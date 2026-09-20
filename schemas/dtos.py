@@ -1,32 +1,34 @@
-﻿from pydantic import BaseModel, Field
-from typing import Dict, List, Optional
+from pydantic import BaseModel, EmailStr, Field
+from typing import Optional, Dict
 from datetime import datetime
 
-class PatientCreate(BaseModel):
-    id: str
-    name: str
-    age: int
-    gender: str
-    dietary_preference: str = "Vegetarian"
-    active_prescriptions: List[str] = []
-    active_supplements: List[str] = []
+class UserRegisterRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(..., min_length=8)
+    full_name: str
+    age: Optional[int] = Field(None, ge=0, le=130)
+    gender: Optional[str] = None
 
-class LabReportCreate(BaseModel):
-    patient_id: str
-    hospital_name: str
-    record_date: datetime
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user_id: str
+
+class ManualRecordCreate(BaseModel):
+    record_date: Optional[datetime] = None
     biomarkers: Dict[str, float]
-    raw_ocr_text: Optional[str] = None
 
-class SimulationInput(BaseModel):
-    exercise_days_per_week: int = Field(..., ge=0, le=7)
-    daily_sugar_reduction_pct: float = Field(..., ge=0, le=100)
-    caloric_deficit_kcal: int = Field(default=300, ge=0, le=1500)
+class SimulationRequest(BaseModel):
+    horizon_days: int = Field(90, ge=14, le=365)
+    daily_steps: int = Field(8000, ge=0, le=50000)
+    carb_reduction_pct: float = Field(20.0, ge=0.0, le=100.0)
+    weekly_cardio_mins: int = Field(150, ge=0, le=1200)
 
-class DrugSafetyQuery(BaseModel):
-    prescriptions: List[str]
-    supplements: List[str]
 
-class ChatQuery(BaseModel):
-    question: str
-    language: str = "en"
+class LifestyleData(BaseModel):
+    activity_level: str  # e.g., "sedentary", "lightly_active", "moderately_active", "very_active"
+    sleep_hours_avg: float  # e.g., 7.5
+    diet_type: str  # e.g., "balanced", "keto", "vegetarian", "vegan", "mediterranean"
+    smoking_status: str  # e.g., "never", "former", "current"
+    alcohol_consumption: str  # e.g., "none", "occasional", "moderate", "heavy"
+    primary_goal: Optional[str] = "general_wellness"

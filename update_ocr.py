@@ -1,4 +1,6 @@
-from typing import Dict, Any, List
+﻿file_path = "services/ocr_engine.py"
+
+code = """from typing import Dict, Any, List
 
 CANONICAL_BIOMARKER_MAP = {
     "fbs": "fasting_glucose",
@@ -40,3 +42,9 @@ class OCREngine:
             elif isinstance(v, (int, float)):
                 parsed[canonical_key] = {"value": float(v), "unit": "standard", "converted": False}
         return parsed
+"""
+
+with open(file_path, "w", encoding="utf-8") as f:
+    f.write(code)
+
+print("✅ Step 1: Updated services/ocr_engine.py with Canonical Mapping & Unit Normalization!")

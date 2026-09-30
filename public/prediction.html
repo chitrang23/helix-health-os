@@ -1,0 +1,176 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Helix Health OS - 30-Day Health Prediction</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { background: radial-gradient(circle at 50% 20%, #0f172a, #020617); color: #f8fafc; font-family: 'Plus Jakarta Sans', sans-serif; min-height: 100vh; }
+    .card-3d { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 1.5rem; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+  </style>
+</head>
+<body>
+  <header style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+    <div style="font-weight: 800; font-size: 1.3rem;">🧬 HELIX <span style="color: #38bdf8; font-size: 0.7rem; padding: 0.2rem 0.5rem; background: rgba(14,165,233,0.2); border-radius: 6px;">30-DAY PREDICTION</span></div>
+    <div style="display: flex; gap: 1rem; align-items: center;">
+      <a href="/dashboard" style="color: #94a3b8; text-decoration: none; font-weight: 600; font-size: 0.85rem;">Dashboard</a>
+      <a href="/api/records/history-page" style="color: #94a3b8; text-decoration: none; font-weight: 600; font-size: 0.85rem;">Medical History</a>
+      <a href="/api/clinical/safety-page" style="color: #94a3b8; text-decoration: none; font-weight: 600; font-size: 0.85rem;">Drug Safety</a>
+      <a href="/api/clinical/chat-page" style="color: #94a3b8; text-decoration: none; font-weight: 600; font-size: 0.85rem;">Clinical Assistant</a>
+      <a href="/api/clinical/prediction-page" style="color: #38bdf8; text-decoration: none; font-weight: 600; font-size: 0.85rem;">30-Day Prediction</a>
+      <button onclick="logout()" style="padding: 0.4rem 0.9rem; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #f87171; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem;">Sign Out</button>
+    </div>
+  </header>
+
+  <main style="max-width: 1200px; margin: 2rem auto; padding: 0 1rem; display: grid; grid-template-columns: 400px 1fr; gap: 1.5rem;">
+    
+    <!-- LEFT: Lifestyle Intake Form -->
+    <div class="card-3d">
+      <h2 style="font-size: 1.15rem; color: #38bdf8; margin-bottom: 0.4rem;">🎯 Lifestyle & Habit Input</h2>
+      <p style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 1.25rem;">Provide your current daily habits so Helix can project your 30-day health trajectory.</p>
+
+      <div style="margin-bottom: 1rem;">
+        <label style="font-size: 0.8rem; color: #cbd5e1; display: block; margin-bottom: 0.3rem;">Target Biomarker to Simulate</label>
+        <input type="text" id="pred-marker" value="Hemoglobin" style="width: 100%; padding: 0.6rem; border-radius: 8px; background: rgba(2,6,23,0.6); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.85rem;">
+      </div>
+
+      <div style="margin-bottom: 1rem;">
+        <label style="font-size: 0.8rem; color: #cbd5e1; display: block; margin-bottom: 0.3rem;">Current Baseline Value</label>
+        <input type="number" step="0.1" id="pred-baseline" value="13.5" style="width: 100%; padding: 0.6rem; border-radius: 8px; background: rgba(2,6,23,0.6); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.85rem;">
+      </div>
+
+      <div style="margin-bottom: 1rem;">
+        <label style="font-size: 0.8rem; color: #cbd5e1; display: block; margin-bottom: 0.3rem;">Average Daily Sleep (Hours)</label>
+        <select id="lifestyle-sleep" style="width: 100%; padding: 0.6rem; border-radius: 8px; background: rgba(2,6,23,0.6); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.85rem;">
+          <option value="Poor (< 5 hours)">Poor (&lt; 5 hours)</option>
+          <option value="Moderate (6-7 hours)">Moderate (6-7 hours)</option>
+          <option value="Optimal (7-9 hours)" selected>Optimal (7-9 hours)</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom: 1rem;">
+        <label style="font-size: 0.8rem; color: #cbd5e1; display: block; margin-bottom: 0.3rem;">Physical Activity Frequency</label>
+        <select id="lifestyle-activity" style="width: 100%; padding: 0.6rem; border-radius: 8px; background: rgba(2,6,23,0.6); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.85rem;">
+          <option value="Sedentary (No regular exercise)">Sedentary (No regular exercise)</option>
+          <option value="Moderate (Walks / Yoga 3x/week)" selected>Moderate (Walks / Yoga 3x/week)</option>
+          <option value="Active (Daily workouts / Gym)">Active (Daily workouts / Gym)</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom: 1.25rem;">
+        <label style="font-size: 0.8rem; color: #cbd5e1; display: block; margin-bottom: 0.3rem;">Diet Quality & Hydration</label>
+        <select id="lifestyle-diet" style="width: 100%; padding: 0.6rem; border-radius: 8px; background: rgba(2,6,23,0.6); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.85rem;">
+          <option value="Processed / Fast Food heavy">Processed / Fast Food heavy</option>
+          <option value="Balanced home-cooked meals" selected>Balanced home-cooked meals</option>
+          <option value="Strict micronutrient & protein focused">Strict micronutrient &amp; protein focused</option>
+        </select>
+      </div>
+
+      <button onclick="runPredictionSimulation()" style="width: 100%; padding: 0.75rem; background: #0ea5e9; border: none; color: #fff; border-radius: 8px; font-weight: 700; font-size: 0.9rem; cursor: pointer;">Simulate 30-Day Trajectory</button>
+    </div>
+
+    <!-- RIGHT: Prediction Graph & AI Insights -->
+    <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+      <div class="card-3d">
+        <h2 style="font-size: 1.1rem; color: #fff; margin-bottom: 0.75rem;">📈 30-Day Health Simulation Graph</h2>
+        <div style="height: 280px; width: 100%;">
+          <canvas id="predictionChart"></canvas>
+        </div>
+      </div>
+
+      <div class="card-3d">
+        <h2 style="font-size: 1.1rem; color: #38bdf8; margin-bottom: 0.5rem;">💡 AI Clinical Insight & Recommendations</h2>
+        <div id="prediction-output" style="font-size: 0.85rem; line-height: 1.6; color: #cbd5e1;">
+          <p style="color: #64748b;">Configure your lifestyle inputs on the left and click simulate to view your projected 30-day health evolution.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const token = localStorage.getItem("helix_token");
+    const userRaw = localStorage.getItem("helix_user");
+    if (!token || !userRaw) { window.location.href = "/"; }
+
+    let chartInstance = null;
+
+    async function runPredictionSimulation() {
+      const marker = document.getElementById("pred-marker").value;
+      const baseline = parseFloat(document.getElementById("pred-baseline").value);
+      const sleep = document.getElementById("lifestyle-sleep").value;
+      const activity = document.getElementById("lifestyle-activity").value;
+      const diet = document.getElementById("lifestyle-diet").value;
+
+      const output = document.getElementById("prediction-output");
+      output.innerHTML = `<span style="color: #0ea5e9;">Running predictive simulation model...</span>`;
+
+      try {
+        const res = await fetch("/api/clinical/predict-30-days", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ marker, baseline, sleep, activity, diet })
+        });
+
+        const data = await res.json();
+        
+        // Render Output Insights
+        output.innerHTML = `
+          <div style="background: rgba(2,6,23,0.6); padding: 1rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);">
+            <h4 style="color: #38bdf8; margin-bottom: 0.3rem;">Projected 30-Day Status: <span style="color: #34d399;">${data.status}</span></h4>
+            <p style="margin-bottom: 0.8rem;">${data.explanation}</p>
+            <h5 style="color: #f59e0b; margin-bottom: 0.2rem;">Actionable Adjustment:</h5>
+            <p style="margin: 0;">${data.recommendation}</p>
+          </div>
+        `;
+
+        // Render Chart
+        renderPredictionChart(marker, baseline, data.projected_day_30);
+      } catch (err) {
+        output.innerHTML = `<span style="color: #ef4444;">Simulation failed.</span>`;
+      }
+    }
+
+    function renderPredictionChart(marker, base, finalVal) {
+      const ctx = document.getElementById("predictionChart").getContext("2d");
+      if (chartInstance) chartInstance.destroy();
+
+      const day10 = Number((base + (finalVal - base) * 0.33).toFixed(2));
+      const day20 = Number((base + (finalVal - base) * 0.66).toFixed(2));
+
+      chartInstance = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: ["Day 0 (Baseline)", "Day 10", "Day 20", "Day 30 (Projected)"],
+          datasets: [{
+            label: `${marker} 30-Day Trajectory`,
+            data: [base, day10, day20, finalVal],
+            borderColor: "#0ea5e9",
+            backgroundColor: "rgba(14, 165, 233, 0.15)",
+            fill: true,
+            tension: 0.35,
+            borderWidth: 3,
+            pointBackgroundColor: "#38bdf8",
+            pointRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: "#f8fafc" } } },
+          scales: {
+            x: { ticks: { color: "#94a3b8" }, grid: { color: "rgba(255,255,255,0.05)" } },
+            y: { ticks: { color: "#94a3b8" }, grid: { color: "rgba(255,255,255,0.05)" } }
+          }
+        }
+      });
+    }
+
+    function logout() { localStorage.clear(); window.location.href = "/"; }
+
+    // Initial Chart Render
+    renderPredictionChart("Hemoglobin", 13.5, 14.1);
+  </script>
+</body>
+</html>

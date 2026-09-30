@@ -1,0 +1,146 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Helix Health OS - Login</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/styles.css">
+  <style>
+    body { background: radial-gradient(circle at 50% 20%, #0f172a, #020617); color: #f8fafc; font-family: 'Plus Jakarta Sans', sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+    .auth-card { background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 2.5rem; width: 100%; max-width: 420px; box-shadow: 0 25px 50px rgba(0,0,0,0.6); }
+  </style>
+</head>
+<body>
+  <div class="auth-card">
+    <div style="text-align: center; margin-bottom: 2rem;">
+      <h1 style="font-size: 1.6rem; color: #fff; margin-bottom: 0.3rem;">🧬 WELCOME TO HELIX</h1>
+      <p style="font-size: 0.8rem; color: #94a3b8;">Enterprise Clinical Intelligence Platform</p>
+    </div>
+
+    <!-- Login Form -->
+    <div id="login-form-container">
+      <div style="margin-bottom: 1rem;">
+        <label style="font-size: 0.8rem; color: #cbd5e1; display: block; margin-bottom: 0.3rem;">Email Address</label>
+        <input type="email" id="login-email" placeholder="e.g., chitrang@helix.os" style="width: 100%; padding: 0.75rem; border-radius: 10px; background: rgba(2,6,23,0.6); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;">
+      </div>
+
+      <div style="margin-bottom: 0.5rem;">
+        <label style="font-size: 0.8rem; color: #cbd5e1; display: block; margin-bottom: 0.3rem;">Password</label>
+        <input type="password" id="login-password" placeholder="••••••••" style="width: 100%; padding: 0.75rem; border-radius: 10px; background: rgba(2,6,23,0.6); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;">
+      </div>
+
+      <div style="text-align: right; margin-bottom: 1.25rem;">
+        <a href="#" onclick="showForgotPassword()" style="font-size: 0.75rem; color: #38bdf8; text-decoration: none;">Forgot Password?</a>
+      </div>
+
+      <button onclick="loginUser()" style="width: 100%; padding: 0.8rem; background: #0ea5e9; border: none; color: #fff; border-radius: 10px; font-weight: 700; font-size: 0.9rem; cursor: pointer; margin-bottom: 1rem;">Sign In</button>
+      
+      <p style="text-align: center; font-size: 0.8rem; color: #94a3b8; margin: 0;">Don't have an account? <a href="/register" style="color: #38bdf8; text-decoration: none; font-weight: 600;">Register Now</a></p>
+    </div>
+
+    <!-- Forgot Password Container (Hidden by default) -->
+    <div id="forgot-form-container" style="display: none;">
+      <div style="margin-bottom: 1rem;">
+        <h3 style="font-size: 1.1rem; color: #38bdf8; margin-bottom: 0.3rem;">Reset Your Password</h3>
+        <p style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 1rem;">Enter your registered email and new secure password.</p>
+        
+        <label style="font-size: 0.8rem; color: #cbd5e1; display: block; margin-bottom: 0.3rem;">Email Address</label>
+        <input type="email" id="reset-email" placeholder="e.g., chitrang@helix.os" style="width: 100%; padding: 0.75rem; border-radius: 10px; background: rgba(2,6,23,0.6); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem; margin-bottom: 0.8rem;">
+
+        <label style="font-size: 0.8rem; color: #cbd5e1; display: block; margin-bottom: 0.3rem;">New Password</label>
+        <input type="password" id="reset-new-password" placeholder="••••••••" style="width: 100%; padding: 0.75rem; border-radius: 10px; background: rgba(2,6,23,0.6); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;">
+      </div>
+
+      <button onclick="submitPasswordReset()" style="width: 100%; padding: 0.8rem; background: #10b981; border: none; color: #fff; border-radius: 10px; font-weight: 700; font-size: 0.9rem; cursor: pointer; margin-bottom: 1rem;">Update Password</button>
+      
+      <p style="text-align: center; font-size: 0.8rem; color: #94a3b8; margin: 0;"><a href="#" onclick="showLogin()" style="color: #38bdf8; text-decoration: none; font-weight: 600;">← Back to Sign In</a></p>
+    </div>
+
+    <div id="auth-msg" style="margin-top: 1rem; text-align: center; font-size: 0.8rem;"></div>
+  </div>
+
+  <script>
+    function showForgotPassword() {
+      document.getElementById("login-form-container").style.display = "none";
+      document.getElementById("forgot-form-container").style.display = "block";
+      document.getElementById("auth-msg").innerText = "";
+    }
+
+    function showLogin() {
+      document.getElementById("forgot-form-container").style.display = "none";
+      document.getElementById("login-form-container").style.display = "block";
+      document.getElementById("auth-msg").innerText = "";
+    }
+
+    async function loginUser() {
+      const email = document.getElementById("login-email").value.trim();
+      const password = document.getElementById("login-password").value;
+      const msg = document.getElementById("auth-msg");
+
+      if (!email || !password) {
+        msg.style.color = "#ef4444";
+        msg.innerText = "Please fill in all fields.";
+        return;
+      }
+
+      try {
+        const formData = new URLSearchParams();
+        formData.append("username", email);
+        formData.append("password", password);
+
+        const res = await fetch("/token", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: formData
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          localStorage.setItem("helix_token", data.access_token);
+          localStorage.setItem("helix_user", JSON.stringify(data.user));
+          window.location.href = "/dashboard";
+        } else {
+          msg.style.color = "#ef4444";
+          msg.innerText = data.detail || "Invalid credentials.";
+        }
+      } catch (err) {
+        msg.style.color = "#ef4444";
+        msg.innerText = "Connection error during login.";
+      }
+    }
+
+    async function submitPasswordReset() {
+      const email = document.getElementById("reset-email").value.trim();
+      const new_password = document.getElementById("reset-new-password").value;
+      const msg = document.getElementById("auth-msg");
+
+      if (!email || !new_password) {
+        msg.style.color = "#ef4444";
+        msg.innerText = "Please enter your email and new password.";
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/auth/reset-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, new_password })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          msg.style.color = "#34d399";
+          msg.innerText = "Password updated successfully! You can now log in.";
+          setTimeout(showLogin, 2000);
+        } else {
+          msg.style.color = "#ef4444";
+          msg.innerText = data.detail || "Password reset failed.";
+        }
+      } catch (err) {
+        msg.style.color = "#ef4444";
+        msg.innerText = "Error connecting to server.";
+      }
+    }
+  </script>
+</body>
+</html>

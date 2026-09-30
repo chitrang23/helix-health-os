@@ -1,0 +1,148 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Helix Health OS - Stress Management & Regulation</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/styles.css">
+  <style>
+    body { background: radial-gradient(circle at 50% 20%, #0f172a, #020617); color: #f8fafc; font-family: 'Plus Jakarta Sans', sans-serif; min-height: 100vh; }
+    .card-3d { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 1.5rem; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+    
+    /* Box Breathing Circle Animation */
+    .breathing-circle-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 0;
+    }
+    .breathing-ring {
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      border: 4px solid rgba(14, 165, 233, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      transition: all 4s ease-in-out;
+    }
+    .breathing-core {
+      width: 120px;
+      height: 120px;
+      background: linear-gradient(135deg, #0284c7, #0ea5e9);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: #fff;
+      box-shadow: 0 0 30px rgba(14, 165, 233, 0.5);
+      animation: pulseCycle 16s infinite ease-in-out;
+    }
+    @keyframes pulseCycle {
+      0% { transform: scale(0.85); background: #0284c7; }
+      25% { transform: scale(1.15); background: #0ea5e9; } /* Inhale 4s */
+      50% { transform: scale(1.15); background: #38bdf8; } /* Hold 4s */
+      75% { transform: scale(0.85); background: #0284c7; } /* Exhale 4s */
+      100% { transform: scale(0.85); background: #0284c7; } /* Hold 4s */
+    }
+  </style>
+</head>
+<body>
+  <header style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+    <div style="font-weight: 800; font-size: 1.2rem;">🧬 HELIX <span style="color: #38bdf8; font-size: 0.65rem; padding: 0.2rem 0.5rem; background: rgba(14,165,233,0.2); border-radius: 6px;">STRESS HUB</span></div>
+    <div style="display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap;">
+      <a href="/dashboard" style="color: #94a3b8; text-decoration: none; font-weight: 600; font-size: 0.78rem;">Dashboard</a>
+      <a href="/api/records/history-page" style="color: #94a3b8; text-decoration: none; font-weight: 600; font-size: 0.78rem;">Medical History</a>
+      <a href="/api/clinical/safety-page" style="color: #94a3b8; text-decoration: none; font-weight: 600; font-size: 0.78rem;">Drug Safety</a>
+      <a href="/api/clinical/chat-page" style="color: #94a3b8; text-decoration: none; font-weight: 600; font-size: 0.78rem;">Assistant</a>
+      <a href="/api/clinical/prediction-page" style="color: #94a3b8; text-decoration: none; font-weight: 600; font-size: 0.78rem;">30-Day</a>
+      <a href="/api/clinical/stress-page" style="color: #f59e0b; text-decoration: none; font-weight: 700; font-size: 0.78rem; background: rgba(245,158,11,0.15); border: 1px solid #f59e0b; padding: 0.3rem 0.5rem; border-radius: 6px;">🧘 Stress Hub</a>
+      <button onclick="logout()" style="padding: 0.35rem 0.7rem; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #f87171; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.78rem;">Sign Out</button>
+    </div>
+  </header>
+
+  <main style="max-width: 1200px; margin: 2rem auto; padding: 0 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+    
+    <!-- LEFT: Box Breathing & Nervous System Regulation -->
+    <div class="card-3d" style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+      <h2 style="font-size: 1.2rem; color: #38bdf8; margin-bottom: 0.3rem;">🌬 Box Breathing (4-4-4-4 Technique)</h2>
+      <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 1.5rem;">Used by Navy SEALs and clinicians to instantly lower heart rate and reset cortisol.</p>
+
+      <div class="breathing-circle-container">
+        <div class="breathing-ring">
+          <div id="breath-label" class="breathing-core">Breathe In</div>
+        </div>
+      </div>
+
+      <div style="margin-top: 1rem; font-size: 0.85rem; color: #cbd5e1; background: rgba(2,6,23,0.5); padding: 1rem; border-radius: 10px; width: 100%; border: 1px solid rgba(255,255,255,0.08);">
+        <p style="margin: 0; font-weight: 600; color: #38bdf8;">Instructions:</p>
+        <p style="margin: 0.3rem 0 0 0;">Inhale for 4s → Hold for 4s → Exhale for 4s → Hold for 4s. Follow the expanding core above.</p>
+      </div>
+    </div>
+
+    <!-- RIGHT: Cognitive Reframing & Stress Dump Journal -->
+    <div class="card-3d">
+      <h2 style="font-size: 1.2rem; color: #f59e0b; margin-bottom: 0.3rem;">📝 Cognitive Reframing Journal</h2>
+      <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 1rem;">Unload mental stressors and let Helix structure an objective, calm perspective.</p>
+
+      <div style="margin-bottom: 0.8rem;">
+        <label style="font-size: 0.8rem; color: #cbd5e1; display: block; margin-bottom: 0.3rem;">What is causing your stress right now?</label>
+        <textarea id="stress-thought" rows="3" placeholder="e.g., Overwhelmed by work deadlines and health report worries..." style="width: 100%; padding: 0.7rem; border-radius: 8px; background: rgba(2,6,23,0.6); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.85rem; resize: none;"></textarea>
+      </div>
+
+      <button onclick="reframeThought()" style="width: 100%; padding: 0.7rem; background: #f59e0b; border: none; color: #fff; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; margin-bottom: 1rem;">Reframe & Calm Mind</button>
+
+      <div id="reframing-output" style="font-size: 0.85rem; line-height: 1.5; color: #cbd5e1; background: rgba(2,6,23,0.6); padding: 1rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); min-height: 90px;">
+        <span style="color: #64748b;">Your reframed perspective will appear here...</span>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    const token = localStorage.getItem("helix_token");
+    if (!token) { window.location.href = "/"; }
+
+    // Dynamic Breathing Text Cycle
+    const label = document.getElementById("breath-label");
+    const cycle = ["Inhale (4s)", "Hold (4s)", "Exhale (4s)", "Hold (4s)"];
+    let idx = 0;
+    setInterval(() => {
+      idx = (idx + 1) % cycle.length;
+      label.innerText = cycle[idx];
+    }, 4000);
+
+    async function reframeThought() {
+      const thought = document.getElementById("stress-thought").value.trim();
+      if (!thought) {
+        alert("Please enter what is stressing you.");
+        return;
+      }
+
+      const out = document.getElementById("reframing-output");
+      out.innerHTML = `<span style="color: #f59e0b;">Reframing thought patterns...</span>`;
+
+      try {
+        const res = await fetch("/api/clinical/reframe-stress", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ thought })
+        });
+        const data = await res.json();
+        out.innerHTML = `
+          <strong style="color: #34d399; display: block; margin-bottom: 0.3rem;">🌿 Calming Perspective:</strong>
+          <p style="margin: 0; color: #f1f5f9;">${data.reframed}</p>
+        `;
+      } catch (err) {
+        out.innerHTML = `<span style="color: #ef4444;">Failed to generate reframing. Take a deep breath.</span>`;
+      }
+    }
+
+    function logout() { localStorage.clear(); window.location.href = "/"; }
+  </script>
+</body>
+</html>

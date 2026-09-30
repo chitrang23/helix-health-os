@@ -1,0 +1,91 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Helix Health OS - Drug Safety Shield</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/styles.css">
+  <style>
+    body { background: radial-gradient(circle at 50% 20%, #0f172a, #020617); color: #f8fafc; font-family: 'Plus Jakarta Sans', sans-serif; min-height: 100vh; }
+    .card-3d { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 1.5rem; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+  </style>
+</head>
+<body>
+  <header style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+    <div style="font-weight: 800; font-size: 1.3rem;">🧬 HELIX <span style="color: #38bdf8; font-size: 0.7rem; padding: 0.2rem 0.5rem; background: rgba(14,165,233,0.2); border-radius: 6px;">SAFETY SHIELD</span></div>
+    <div style="display: flex; gap: 1rem; align-items: center;">
+      <a href="/dashboard" style="color: #94a3b8; text-decoration: none; font-weight: 600; font-size: 0.85rem;">Dashboard</a>
+      <a href="/api/records/history-page" style="color: #94a3b8; text-decoration: none; font-weight: 600; font-size: 0.85rem;">Medical History</a>
+      <a href="/api/clinical/safety-page" style="color: #38bdf8; text-decoration: none; font-weight: 600; font-size: 0.85rem;">Drug Safety</a>
+      <a href="/api/clinical/chat-page" style="color: #94a3b8; text-decoration: none; font-weight: 600; font-size: 0.85rem;">Clinical Assistant</a>
+      <button onclick="logout()" style="padding: 0.4rem 0.9rem; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #f87171; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem;">Sign Out</button>
+    </div>
+  </header>
+
+  <main style="max-width: 700px; margin: 3rem auto; padding: 0 1rem;">
+    <div class="card-3d">
+      <h2 style="font-size: 1.3rem; color: #38bdf8; margin-bottom: 0.4rem;">🛡 Drug & Supplement Safety Shield</h2>
+      <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 1.5rem;">Audit active prescriptions against everyday vitamins, supplements, and lab findings to detect hidden side effects before doctor visits.</p>
+      
+      <div style="margin-bottom: 1rem;">
+        <label style="font-size: 0.8rem; color: #cbd5e1; display: block; margin-bottom: 0.3rem;">Active Prescriptions (comma-separated)</label>
+        <input type="text" id="rx-input" placeholder="e.g., Metformin, Atorvastatin" style="width: 100%; padding: 0.7rem; border-radius: 8px; background: rgba(2,6,23,0.6); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;">
+      </div>
+
+      <div style="margin-bottom: 1.25rem;">
+        <label style="font-size: 0.8rem; color: #cbd5e1; display: block; margin-bottom: 0.3rem;">Daily Vitamins & Supplements (comma-separated)</label>
+        <input type="text" id="supp-input" placeholder="e.g., Vitamin D3, Ashwagandha, Omega-3" style="width: 100%; padding: 0.7rem; border-radius: 8px; background: rgba(2,6,23,0.6); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;">
+      </div>
+
+      <button onclick="checkDrugSafety()" style="width: 100%; padding: 0.75rem; background: #0ea5e9; border: none; color: #fff; border-radius: 8px; font-weight: 700; font-size: 0.9rem; cursor: pointer;">Run Contraindication Audit</button>
+
+      <div id="safety-output" style="margin-top: 1.5rem; font-size: 0.85rem;"></div>
+    </div>
+  </main>
+
+  <script>
+    const token = localStorage.getItem("helix_token");
+    if (!token) { window.location.href = "/"; }
+
+    async function checkDrugSafety() {
+      const rx = document.getElementById("rx-input").value.split(",").map(s => s.trim()).filter(Boolean);
+      const supp = document.getElementById("supp-input").value.split(",").map(s => s.trim()).filter(Boolean);
+
+      if (rx.length === 0 && supp.length === 0) {
+        alert("Please enter at least one medication or supplement.");
+        return;
+      }
+
+      const output = document.getElementById("safety-output");
+      output.innerHTML = `<span style="color: #0ea5e9;">Auditing pharmacological interactions...</span>`;
+
+      try {
+        const res = await fetch("/api/clinical/safety-check", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ medications: rx, supplements: supp })
+        });
+        
+        const data = await res.json();
+        if (!data.interactions_found) {
+          output.innerHTML = `<div style="color: #34d399; font-weight: 700; padding: 1rem; background: rgba(16,185,129,0.1); border-radius: 8px; border: 1px solid #10b981;">✓ No critical interactions found among these combinations. Safe to maintain regimen.</div>`;
+        } else {
+          let html = `<div style="color: #ef4444; font-weight: 700; margin-bottom: 0.5rem; padding: 0.5rem; background: rgba(239,68,68,0.1); border-radius: 8px;">⚠️ Audit Severity: ${data.severity}</div>`;
+          for (const item of data.findings) {
+            html += `<div style="background: rgba(15,23,42,0.9); border: 1px solid #ef4444; padding: 0.8rem; border-radius: 8px; margin-bottom: 0.5rem;">
+              <strong style="color: #fff;">${item.combination}</strong><br>
+              <span style="color: #cbd5e1;">${item.clinical_effect}</span><br>
+              <em style="color: #38bdf8; display: block; margin-top: 0.3rem;">Recommendation: ${item.recommendation}</em>
+            </div>`;
+          }
+          output.innerHTML = html;
+        }
+      } catch (err) {
+        output.innerHTML = `<span style="color: #ef4444;">Safety audit failed.</span>`;
+      }
+    }
+
+    function logout() { localStorage.clear(); window.location.href = "/"; }
+  </script>
+</body>
+</html>

@@ -1,0 +1,128 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Helix Health OS - Enterprise Intelligence</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      background: radial-gradient(circle at 50% 20%, #0f172a, #020617);
+      color: #f8fafc;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .card-3d {
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 1.25rem;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    }
+  </style>
+</head>
+<body>
+  <header style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+    <div style="font-weight: 800; font-size: 1.2rem; letter-spacing: -0.5px;">
+      🧬 HELIX <span style="background: linear-gradient(135deg, #0284c7, #0ea5e9); color: #fff; font-size: 0.65rem; padding: 0.2rem 0.5rem; border-radius: 6px; margin-left: 0.4rem;">ENTERPRISE OS</span>
+    </div>
+    
+    <div style="display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap;">
+      <a href="/dashboard" style="color: #38bdf8; text-decoration: none; font-weight: 600; font-size: 0.78rem;">Dashboard</a>
+      <a href="/api/records/history-page" style="color: #94a3b8; text-decoration: none; font-weight: 600; font-size: 0.78rem;">Medical History</a>
+      <a href="/api/clinical/safety-page" style="color: #94a3b8; text-decoration: none; font-weight: 600; font-size: 0.78rem;">Drug Safety</a>
+      <a href="/api/clinical/chat-page" style="color: #94a3b8; text-decoration: none; font-weight: 600; font-size: 0.78rem;">Assistant</a>
+      <a href="/api/clinical/prediction-page" style="color: #94a3b8; text-decoration: none; font-weight: 600; font-size: 0.78rem;">30-Day</a>
+      <a href="/api/clinical/stress-page" style="color: #f59e0b; text-decoration: none; font-weight: 700; font-size: 0.78rem; background: rgba(245,158,11,0.15); border: 1px solid #f59e0b; padding: 0.3rem 0.5rem; border-radius: 6px;">🧘 Stress Hub</a>
+      
+      <div id="patient-badge" style="background: rgba(14, 165, 233, 0.15); border: 1px solid #0ea5e9; padding: 0.35rem 0.6rem; border-radius: 8px; font-size: 0.75rem; color: #38bdf8;">Loading...</div>
+      <button onclick="logout()" style="padding: 0.35rem 0.7rem; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #f87171; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.78rem;">Sign Out</button>
+    </div>
+  </header>
+
+  <main style="max-width: 1400px; margin: 1.5rem auto; padding: 0 1.5rem; display: grid; grid-template-columns: 330px 1fr 340px; gap: 1.5rem;">
+    
+    <!-- LEFT PANEL -->
+    <aside style="display: flex; flex-direction: column; gap: 1.25rem;">
+      <div class="card-3d">
+        <h2 style="font-size: 1rem; color: #38bdf8; margin-bottom: 0.5rem;">📄 Report Ingestion Engine</h2>
+        <div id="drop-zone" style="border: 2px dashed rgba(255,255,255,0.2); border-radius: 12px; padding: 1.2rem; text-align: center; background: rgba(2, 6, 23, 0.4); cursor: pointer;" onclick="document.getElementById('file-input').click()">
+          <p style="font-size: 0.85rem; color: #38bdf8; font-weight: 600; margin:0;">📁 Click to Upload Report</p>
+          <span id="file-name-display" style="font-size: 0.75rem; color: #94a3b8; display: block; margin-top: 0.4rem;">PDF, PNG, JPG (Up to 50MB)</span>
+        </div>
+        <input type="file" id="file-input" style="display: none;" accept=".pdf,.png,.jpg,.jpeg,.webp" onchange="handleFileSelect(event)">
+        <button class="btn-submit" style="margin-top: 0.8rem; width:100%; padding: 0.6rem; background: #0ea5e9; border:none; color:#fff; border-radius:8px; font-weight:700; cursor:pointer;" onclick="uploadAndParseReport()">Parse Report Instantly</button>
+      </div>
+
+      <div class="card-3d">
+        <h2 style="font-size: 0.95rem; margin-bottom: 0.5rem;">🔍 Document Origin Metadata</h2>
+        <div id="report-metadata" style="font-size: 0.8rem; line-height: 1.6; color: #94a3b8;">
+          <p><strong>Parsed Date:</strong> <span id="meta-date" style="color:#fff;">--</span></p>
+          <p><strong>Hospital / Lab:</strong> <span id="meta-hospital" style="color:#fff;">--</span></p>
+        </div>
+      </div>
+
+      <div class="card-3d">
+        <h2 style="font-size: 0.95rem; margin-bottom: 0.5rem;">🧪 Ingested Report Parameters</h2>
+        <p style="font-size: 0.7rem; color: #94a3b8; margin-bottom: 0.5rem;">Click any item to explain & graph</p>
+        <div id="parsed-results" style="font-size: 0.8rem; color: #94a3b8; max-height: 250px; overflow-y: auto;">
+          Awaiting document upload...
+        </div>
+      </div>
+    </aside>
+
+    <!-- CENTER PANEL -->
+    <section style="display: flex; flex-direction: column; gap: 1.25rem;">
+      <div class="card-3d" style="min-height: 280px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem; margin-bottom: 0.75rem;">
+          <h2 style="font-size: 1.1rem; color: #fff;">💡 Plain-Language Biomarker Explanations</h2>
+          <span style="font-size: 0.75rem; background: rgba(14, 165, 233, 0.2); color: #38bdf8; padding: 0.2rem 0.6rem; border-radius: 6px; font-weight: 700;">Patient View</span>
+        </div>
+
+        <div id="explanation-hub" style="line-height: 1.6; color: #e2e8f0;">
+          <div style="text-align: center; padding: 2rem 1rem; color: #64748b;">
+            <p style="font-size: 2rem; margin-bottom: 0.5rem;">📋</p>
+            <h3 style="color: #fff; font-size: 0.95rem; margin-bottom: 0.3rem;">No Biomarker Selected</h3>
+            <p style="font-size: 0.8rem; max-width: 380px; margin: 0 auto;">Upload your medical lab report on the left or click any extracted parameter to view plain-language medical explanations and target ranges.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-3d">
+        <h2 style="font-size: 1.05rem; color: #38bdf8; margin-bottom: 0.6rem;">🩺 Dynamic Symptom & Report Correlator</h2>
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 0.8rem;">
+          <input type="text" id="symptoms-input" placeholder="Enter active symptoms (e.g. fatigue, dizziness)" style="flex:1; padding:0.6rem; border-radius:8px; background:rgba(2, 6, 23, 0.6); border:1px solid rgba(255,255,255,0.15); color:#fff; font-size:0.85rem;">
+          <button onclick="correlateSymptoms()" style="padding:0.6rem 1rem; background:#0ea5e9; border:none; color:#fff; border-radius:8px; font-weight:700; cursor:pointer;">Analyze</button>
+        </div>
+        <div id="correlation-output" style="font-size: 0.85rem; line-height: 1.6; color: #cbd5e1;">
+          <p style="color: #64748b; text-align: center; padding: 1rem;">Enter your active symptoms above to correlate with lab findings and get doctor referral guidance.</p>
+        </div>
+      </div>
+
+      <div class="card-3d" style="border-left: 4px solid #10b981;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <h3 style="font-size: 0.95rem; color: #34d399; margin:0;">🧘 Habuild Daily Virtual Yoga & Habit Building</h3>
+            <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 0.2rem;">India's Best Live & Virtual Sessions for Metabolic Recovery</p>
+          </div>
+          <a href="https://habuild.in/" target="_blank" style="padding: 0.45rem 0.9rem; background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #34d399; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 0.8rem;">Explore Habuild ↗</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT PANEL -->
+    <aside style="display: flex; flex-direction: column; gap: 1.25rem;">
+      <div class="card-3d">
+        <h2 style="font-size: 1rem; margin-bottom: 0.75rem;">📈 90-Day Trajectory Research</h2>
+        <div style="height: 380px; width: 100%;">
+          <canvas id="twinChart"></canvas>
+        </div>
+      </div>
+    </aside>
+
+  </main>
+
+  <script src="/static/js/dashboard.js"></script>
+</body>
+</html>

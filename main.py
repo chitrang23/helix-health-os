@@ -1,13 +1,18 @@
-import os
-from fastapi import FastAPI
+﻿from fastapi import FastAPI, Request, status
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from datetime import datetime, timezone
+import logging
 
-from core.database import Base, engine, SessionLocal
-from services.knowledge_seeder import seed_db_if_empty
+from routes import auth, records, clinical
 
-Base.metadata.create_all(bind=engine)
-
-app = FastAPI(title="Helix Health Intelligence Engine API", version="1.0.0")
+app = FastAPI(
+    title="Helix Health OS",
+    version="2.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -17,30 +22,35 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-db_session = SessionLocal()
-try:
-    seed_db_if_empty(db_session)
-finally:
-    db_session.close()
+app.mount("/static", StaticFiles(directory="public"), name="static")
 
+# Mount All Routers
+app.include_router(auth.router)
+app.include_router(records.router)
+app.include_router(clinical.router)
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logging.error(f"Unhandled Error on {request.url.path}: {str(exc)}", exc_info=True)
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={
+            "success": False,
+            "message": "An internal health OS processing error occurred.",
+            "error": str(exc),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    )
+
+# Page Routes
 @app.get("/")
-def read_root():
-    return {"status": "Helix Engine Online", "version": "1.0.0"}
+async def serve_login():
+    return FileResponse("public/index.html")
 
-# Safely register available routers
-from routes import auth, records, twin
-app.include_router(auth.router, prefix="/api")
-app.include_router(records.router, prefix="/api")
-app.include_router(twin.router, prefix="/api")
+@app.get("/register")
+async def serve_register():
+    return FileResponse("public/register.html")
 
-# Load remaining sub-routers if present
-try:
-    from routes import export, user, pipeline, symptoms, stress, admin
-    app.include_router(export.router, prefix="/api/v1")
-    app.include_router(user.router, prefix="/api/v1")
-    app.include_router(pipeline.router, prefix="/api/v1")
-    app.include_router(symptoms.router, prefix="/api/v1")
-    app.include_router(stress.router, prefix="/api/v1")
-    app.include_router(admin.router, prefix="/api/v1")
-except Exception as e:
-    print(f"Optional router load note: {e}")
+@app.get("/dashboard")
+async def serve_dashboard():
+    return FileResponse("public/dashboard.html")

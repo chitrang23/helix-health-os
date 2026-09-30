@@ -1,0 +1,139 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Helix Health OS - Patient Timeline & Medical History</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/styles.css">
+  <style>
+    body {
+      background: radial-gradient(circle at 50% 20%, #0f172a, #020617);
+      color: #f8fafc;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      min-height: 100vh;
+    }
+    .timeline-container {
+      position: relative;
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    .timeline-container::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 30px;
+      width: 3px;
+      background: rgba(14, 165, 233, 0.3);
+    }
+    .timeline-item {
+      position: relative;
+      margin-bottom: 2rem;
+      padding-left: 60px;
+    }
+    .timeline-dot {
+      position: absolute;
+      left: 22px;
+      top: 4px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #0ea5e9;
+      border: 3px solid #0f172a;
+      box-shadow: 0 0 10px #0ea5e9;
+    }
+    .timeline-card {
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 14px;
+      padding: 1.25rem;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+  </style>
+</head>
+<body>
+  <header style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+    <div style="font-weight: 800; font-size: 1.3rem;">
+      🧬 HELIX <span style="color: #38bdf8; font-size: 0.7rem; padding: 0.2rem 0.5rem; background: rgba(14,165,233,0.2); border-radius: 6px;">TIMELINE HISTORY</span>
+    </div>
+    <div style="display: flex; gap: 1rem; align-items: center;">
+      <a href="/dashboard" style="color: #38bdf8; text-decoration: none; font-weight: 600; font-size: 0.85rem;">← Back to Dashboard</a>
+      <button onclick="logout()" style="padding: 0.4rem 0.9rem; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #f87171; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem;">Sign Out</button>
+    </div>
+  </header>
+
+  <main style="max-width: 900px; margin: 2rem auto; padding: 0 1rem;">
+    <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 1.5rem; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <h2 id="patient-name" style="font-size: 1.3rem; color: #fff; margin-bottom: 0.3rem;">Loading Patient Details...</h2>
+        <p id="patient-meta" style="font-size: 0.85rem; color: #94a3b8; margin: 0;"></p>
+      </div>
+      <span style="background: rgba(14, 165, 233, 0.2); color: #38bdf8; padding: 0.4rem 0.9rem; border-radius: 8px; font-weight: 700; font-size: 0.8rem;">Complete Health Timeline</span>
+    </div>
+
+    <h3 style="font-size: 1.1rem; color: #fff; margin-bottom: 1.5rem;">📅 Chronological Diagnosis & Visit History</h3>
+    
+    <div id="timeline-list" class="timeline-container">
+      <p style="color: #94a3b8; text-align: center; padding: 2rem;">Loading medical history timeline...</p>
+    </div>
+  </main>
+
+  <script>
+    const token = localStorage.getItem("helix_token");
+    const userRaw = localStorage.getItem("helix_user");
+    if (!token || !userRaw) { window.location.href = "/"; }
+
+    const user = JSON.parse(userRaw);
+    document.getElementById("patient-name").innerText = user.full_name;
+    document.getElementById("patient-meta").innerText = `Age: ${user.age} yrs | Gender: ${user.gender} | DOB: ${user.birthday} | System ID: HLX-00${user.user_id}`;
+
+    async function loadMedicalHistory() {
+      const timelineList = document.getElementById("timeline-list");
+      try {
+        const res = await fetch(`/api/records/history/${user.user_id}`);
+        const data = await res.json();
+
+        if (res.ok && data.history && data.history.length > 0) {
+          let html = "";
+          data.history.forEach(item => {
+            html += `
+              <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-card">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <h4 style="color: #38bdf8; font-size: 1rem; margin: 0;">${item.diagnosis_title}</h4>
+                    <span style="font-size: 0.75rem; background: rgba(255,255,255,0.1); padding: 0.2rem 0.6rem; border-radius: 6px; color: #cbd5e1;">${item.diagnosis_date || 'Recent Visit'}</span>
+                  </div>
+                  <p style="font-size: 0.85rem; color: #f1f5f9; margin-bottom: 0.5rem;">${item.description}</p>
+                  <span style="font-size: 0.75rem; color: #94a3b8;">📍 Facility / Hospital: <strong>${item.hospital_name || 'General Clinic'}</strong></span>
+                </div>
+              </div>
+            `;
+          });
+          timelineList.innerHTML = html;
+        } else {
+          timelineList.innerHTML = `
+            <div style="text-align: center; padding: 3rem; color: #94a3b8; background: rgba(15,23,42,0.4); border-radius: 14px; border: 1px dashed rgba(255,255,255,0.1);">
+              <p style="font-size: 2rem; margin-bottom: 0.5rem;">📭</p>
+              <h4 style="color: #fff; margin-bottom: 0.3rem;">No Historical Records Found</h4>
+              <p style="font-size: 0.85rem;">Upload lab reports or hospital checkups on your dashboard to automatically populate your medical history timeline.</p>
+            </div>
+          `;
+        }
+      } catch (err) {
+        console.error(err);
+        timelineList.innerHTML = `<p style="color: #ef4444; text-align: center;">Failed to load timeline history.</p>`;
+      }
+    }
+
+    function logout() {
+      localStorage.clear();
+      window.location.href = "/";
+    }
+
+    loadMedicalHistory();
+  </script>
+</body>
+</html>

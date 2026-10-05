@@ -11,3 +11,8 @@ class Settings:
     ]
 
 settings = Settings()
+
+MAX_UPLOAD_SIZE_MB = 100
+
+# Added Gemini API Key support
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')

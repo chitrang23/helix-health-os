@@ -1,56 +1,32 @@
-﻿from fastapi import FastAPI, Request, status
-from fastapi.responses import JSONResponse, FileResponse
-from fastapi.middleware.cors import CORSMiddleware
+﻿from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
-from datetime import datetime, timezone
-import logging
+from fastapi.responses import FileResponse
+import os
 
-from routes import auth, records, clinical
+from routes import ocr, clinical, twin, records, admin, auth
 
-app = FastAPI(
-    title="Helix Health OS",
-    version="2.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc"
-)
+app = FastAPI(title="Helix Health OS")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+if os.path.exists("public"):
+    app.mount("/static", StaticFiles(directory="public"), name="public")
 
-app.mount("/static", StaticFiles(directory="public"), name="static")
+app.include_router(ocr.router, prefix="/api/ocr")
+app.include_router(clinical.router, prefix="/api/clinical")
+app.include_router(twin.router, prefix="/api/twin")
+app.include_router(records.router, prefix="/api/records")
+app.include_router(admin.router, prefix="/api/admin")
+app.include_router(auth.router, prefix="/api/auth")
 
-# Mount All Routers
-app.include_router(auth.router)
-app.include_router(records.router)
-app.include_router(clinical.router)
-
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    logging.error(f"Unhandled Error on {request.url.path}: {str(exc)}", exc_info=True)
-    return JSONResponse(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={
-            "success": False,
-            "message": "An internal health OS processing error occurred.",
-            "error": str(exc),
-            "timestamp": datetime.now(timezone.utc).isoformat()
-        }
-    )
-
-# Page Routes
 @app.get("/")
-async def serve_login():
-    return FileResponse("public/index.html")
+async def serve_index():
+    return FileResponse("public/dashboard.html")
 
-@app.get("/register")
-async def serve_register():
-    return FileResponse("public/register.html")
-
-@app.get("/dashboard")
-async def serve_dashboard():
+@app.get("/{filename}")
+async def serve_page(filename: str):
+    clean_name = filename.split("?")[0].lower()
+    if not clean_name.endswith(".html"):
+        clean_name += ".html"
+    file_path = os.path.join("public", clean_name)
+    if os.path.exists(file_path):
+        return FileResponse(file_path)
     return FileResponse("public/dashboard.html")

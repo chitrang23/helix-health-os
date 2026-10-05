@@ -11,16 +11,31 @@
   </style>
 </head>
 <body>
-  <header style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
-    <div style="font-weight: 800; font-size: 1.3rem;">🧬 HELIX <span style="color: #38bdf8; font-size: 0.7rem; padding: 0.2rem 0.5rem; background: rgba(14,165,233,0.2); border-radius: 6px;">CLINICAL ASSISTANT</span></div>
-    <div style="display: flex; gap: 1rem; align-items: center;">
-      <a href="/dashboard" style="color: #94a3b8; text-decoration: none; font-weight: 600; font-size: 0.85rem;">Dashboard</a>
-      <a href="/api/records/history-page" style="color: #94a3b8; text-decoration: none; font-weight: 600; font-size: 0.85rem;">Medical History</a>
-      <a href="/api/clinical/safety-page" style="color: #94a3b8; text-decoration: none; font-weight: 600; font-size: 0.85rem;">Drug Safety</a>
-      <a href="/api/clinical/chat-page" style="color: #38bdf8; text-decoration: none; font-weight: 600; font-size: 0.85rem;">Clinical Assistant</a>
-      <button onclick="logout()" style="padding: 0.4rem 0.9rem; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #f87171; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem;">Sign Out</button>
-    </div>
-  </header>
+    <!-- Unified Navbar -->
+    <nav class="border-b border-slate-800 bg-slate-900/90 backdrop-blur px-6 py-4 flex justify-between items-center sticky top-0 z-50">
+        <div class="flex items-center space-x-3">
+            <div class="h-3 w-3 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_#10b981]"></div>
+            <span class="font-bold text-lg tracking-wider text-emerald-400">HELIX // ENTERPRISE OS</span>
+        </div>
+        <div class="space-x-4 text-xs font-medium text-slate-300 flex items-center">
+            <a href="/dashboard.html" class="hover:text-emerald-400 transition">Dashboard</a>
+            <a href="/history.html" class="hover:text-emerald-400 transition">Medical History</a>
+            <a href="/safety.html" class="hover:text-emerald-400 transition">Drug Safety</a>
+            <a href="/chat.html" class="hover:text-emerald-400 transition">Assistant</a>
+            <a href="/prediction.html" class="hover:text-emerald-400 transition">30-Day</a>
+            <a href="/stress.html" class="hover:text-emerald-400 transition">Stress & Flow</a>
+            <a href="/soap.html" class="hover:text-emerald-400 transition">SOAP & Billing</a>
+            <a href="/register.html" class="hover:text-emerald-400 transition">Register</a>
+            <a href="/dashboard.html" class="bg-rose-600/20 text-rose-400 border border-rose-500/30 px-3 py-1 rounded-lg hover:bg-rose-600/30 transition font-bold">Sign Out</a>
+        </div>
+    </nav>
+    <!-- Unified Navbar -->
+    
+    <!-- Unified Navbar -->
+    
+    <!-- Unified Navbar -->
+    
+  
 
   <main style="max-width: 800px; margin: 2rem auto; padding: 0 1rem;">
     <div class="card-3d" style="height: 75vh; display: flex; flex-direction: column;">

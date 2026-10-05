@@ -1,4 +1,8 @@
-from fastapi import APIRouter, HTTPException, status
+import os
+
+os.makedirs("routes", exist_ok=True)
+
+code = '''from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List, Optional
@@ -199,3 +203,9 @@ Patient Question: {req.message}"""
     )
 
     return {"reply": response.text}
+'''
+
+with open("routes/clinical.py", "w", encoding="utf-8") as f:
+    f.write(code)
+
+print("Successfully generated routes/clinical.py!")

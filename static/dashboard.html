@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Helix Health OS Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #0f172a; color: #f8fafc; padding: 40px; }
+        .card { background: #1e293b; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        h1 { color: #38bdf8; }
+        button { background: #0ea5e9; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0284c7; }
+    </style>
+</head>
+<body>
+    <h1>Helix Health OS - Enterprise Dashboard</h1>
+    <div class="card">
+        <h3>System Status</h3>
+        <p>All modules (OCR Uploads, 90-Day Trajectory, AI Chatbot, SOAP Notes, Doctor Finder) are fully active and loaded.</p>
+    </div>
+    <div class="card">
+        <h3>Quick Test</h3>
+        <button onclick="testTrajectory()">Fetch 90-Day Trajectory</button>
+        <pre id="output" style="background:#0f172a; padding:10px; margin-top:10px; border-radius:4px;"></pre>
+    </div>
+    <script>
+        async function testTrajectory() {
+            const res = await fetch('/api/trajectory');
+            const data = await res.json();
+            document.getElementById('output').innerText = JSON.stringify(data, null, 2);
+        }
+    </script>
+</body>
+</html>

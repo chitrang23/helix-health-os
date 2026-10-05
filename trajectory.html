@@ -1,0 +1,161 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Helix Health OS - Clinical Trajectory & Safety Matrix</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+    <!-- Navbar -->
+    <nav class="border-b border-slate-800 bg-slate-900/50 backdrop-blur px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center space-x-3">
+            <div class="h-3 w-3 bg-emerald-500 rounded-full animate-pulse"></div>
+            <span class="font-bold text-lg tracking-wider text-emerald-400">HELIX // CLINICAL TRAJECTORY MATRIX</span>
+        </div>
+        <div class="space-x-6 text-sm font-medium text-slate-300">
+            <a href="/dashboard.html" class="hover:text-emerald-400 transition">Dashboard</a>
+            <a href="/trajectory.html" class="text-emerald-400 border-b-2 border-emerald-400 pb-1">Trajectory & Safety</a>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="max-w-6xl mx-auto px-6 py-10">
+        <div class="mb-8">
+            <h1 class="text-3xl font-extrabold text-white tracking-tight">Longitudinal Risk & Safety Audit</h1>
+            <p class="text-slate-400 mt-2">Analyze longitudinal biomarker velocity and automated drug-lab contraindications for clinician review.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Input Form Card -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+                <h2 class="text-xl font-semibold mb-4 text-emerald-400">Patient Clinical Snapshot</h2>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Current Medications (comma separated)</label>
+                        <input type="text" id="meds" value="Metformin, Lisinopril" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Current Creatinine (mg/dL)</label>
+                            <input type="number" step="0.1" id="currCr" value="1.8" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Previous Creatinine (mg/dL)</label>
+                            <input type="number" step="0.1" id="prevCr" value="1.1" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-emerald-500">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Current Potassium (mEq/L)</label>
+                            <input type="number" step="0.1" id="currK" value="4.8" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Current HbA1c (%)</label>
+                            <input type="number" step="0.1" id="currHb" value="7.2" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-emerald-500">
+                        </div>
+                    </div>
+
+                    <button onclick="runTrajectoryAnalysis()" class="w-full mt-4 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-3 rounded-lg transition shadow-lg shadow-emerald-900/20">
+                        Run Clinical Safety Audit
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Output Card -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
+                <div>
+                    <h2 class="text-xl font-semibold mb-4 text-emerald-400">Clinical Audit & Action Matrix</h2>
+                    
+                    <div id="outputPlaceholder" class="text-slate-500 italic text-sm mt-10 text-center">
+                        Execute audit to evaluate velocity trends and safety contraindications...
+                    </div>
+
+                    <div id="resultsContainer" class="hidden space-y-6">
+                        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                            <span class="text-xs uppercase text-slate-400 font-semibold">Biomarker Trajectory Trend</span>
+                            <div id="trendResult" class="text-lg font-bold text-amber-400 mt-1"></div>
+                        </div>
+
+                        <div>
+                            <span class="text-xs uppercase text-slate-400 font-semibold">Safety Warnings & Contraindications</span>
+                            <ul id="warningsList" class="mt-2 space-y-2 text-sm text-red-400"></ul>
+                        </div>
+
+                        <div>
+                            <span class="text-xs uppercase text-slate-400 font-semibold">Physician Recommended Action Items</span>
+                            <ul id="actionsList" class="mt-2 space-y-2 text-sm text-emerald-300"></ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-t border-slate-800 pt-4 mt-6 text-xs text-slate-500 flex justify-between">
+                    <span>Helix Decision Support Engine</span>
+                    <span>For Clinical Evaluation Only</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        async function runTrajectoryAnalysis() {
+            const payload = {
+                medications: document.getElementById('meds').value.split(',').map(m => m.trim()),
+                current_labs: {
+                    creatinine: parseFloat(document.getElementById('currCr').value),
+                    potassium: parseFloat(document.getElementById('currK').value),
+                    hba1c: parseFloat(document.getElementById('currHb').value)
+                },
+                history: [
+                    {
+                        creatinine: parseFloat(document.getElementById('prevCr').value),
+                        hba1c: 6.8
+                    }
+                ]
+            };
+
+            try {
+                const response = await fetch('/api/clinical/trajectory-analysis', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+
+                document.getElementById('outputPlaceholder').classList.add('hidden');
+                document.getElementById('resultsContainer').classList.remove('hidden');
+
+                document.getElementById('trendResult').innerText = data.trends.creatinine_trajectory;
+
+                const warningsList = document.getElementById('warningsList');
+                warningsList.innerHTML = '';
+                if (data.clinical_warnings.length === 0) {
+                    warningsList.innerHTML = '<li class="text-emerald-400">No critical pharmacological or velocity warnings detected.</li>';
+                } else {
+                    data.clinical_warnings.forEach(w => {
+                        const li = document.createElement('li');
+                        li.className = 'bg-red-950/30 border border-red-900/50 p-2.5 rounded-lg';
+                        li.innerText = '⚠️ ' + w;
+                        warningsList.appendChild(li);
+                    });
+                }
+
+                const actionsList = document.getElementById('actionsList');
+                actionsList.innerHTML = '';
+                data.physician_action_items.forEach(a => {
+                    const li = document.createElement('li');
+                    li.className = 'bg-emerald-950/20 border border-emerald-900/40 p-2.5 rounded-lg';
+                    li.innerText = '🔹 ' + a;
+                    actionsList.appendChild(li);
+                });
+
+            } catch (err) {
+                alert('Error executing clinical audit: ' + err);
+            }
+        }
+    </script>
+</body>
+</html>

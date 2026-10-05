@@ -1,128 +1,190 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Helix Health OS - Enterprise Intelligence</title>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/styles.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    body {
-      background: radial-gradient(circle at 50% 20%, #0f172a, #020617);
-      color: #f8fafc;
-      font-family: 'Plus Jakarta Sans', sans-serif;
-    }
-    .card-3d {
-      background: rgba(15, 23, 42, 0.65);
-      backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 16px;
-      padding: 1.25rem;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Helix Health OS - Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .card-3d {
+            background: linear-gradient(145deg, #0f172a, #090d16);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5), inset 0 1px 1px 0 rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+        }
+    </style>
 </head>
-<body>
-  <header style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
-    <div style="font-weight: 800; font-size: 1.2rem; letter-spacing: -0.5px;">
-      🧬 HELIX <span style="background: linear-gradient(135deg, #0284c7, #0ea5e9); color: #fff; font-size: 0.65rem; padding: 0.2rem 0.5rem; border-radius: 6px; margin-left: 0.4rem;">ENTERPRISE OS</span>
-    </div>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+    <!-- Unified Navbar -->
+    <nav class="border-b border-slate-800 bg-slate-900/90 backdrop-blur px-6 py-4 flex justify-between items-center sticky top-0 z-50">
+        <div class="flex items-center space-x-3">
+            <div class="h-3 w-3 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_#10b981]"></div>
+            <span class="font-bold text-lg tracking-wider text-emerald-400">HELIX // ENTERPRISE OS</span>
+        </div>
+        <div class="space-x-4 text-xs font-medium text-slate-300 flex items-center">
+            <a href="/dashboard.html" class="hover:text-emerald-400 transition">Dashboard</a>
+            <a href="/history.html" class="hover:text-emerald-400 transition">Medical History</a>
+            <a href="/safety.html" class="hover:text-emerald-400 transition">Drug Safety</a>
+            <a href="/chat.html" class="hover:text-emerald-400 transition">Assistant</a>
+            <a href="/prediction.html" class="hover:text-emerald-400 transition">30-Day</a>
+            <a href="/stress.html" class="hover:text-emerald-400 transition">Stress & Flow</a>
+            <a href="/soap.html" class="hover:text-emerald-400 transition">SOAP & Billing</a>
+            <a href="/register.html" class="hover:text-emerald-400 transition">Register</a>
+            <a href="/dashboard.html" class="bg-rose-600/20 text-rose-400 border border-rose-500/30 px-3 py-1 rounded-lg hover:bg-rose-600/30 transition font-bold">Sign Out</a>
+        </div>
+    </nav>
+    <!-- Unified Navbar -->
     
-    <div style="display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap;">
-      <a href="/dashboard" style="color: #38bdf8; text-decoration: none; font-weight: 600; font-size: 0.78rem;">Dashboard</a>
-      <a href="/api/records/history-page" style="color: #94a3b8; text-decoration: none; font-weight: 600; font-size: 0.78rem;">Medical History</a>
-      <a href="/api/clinical/safety-page" style="color: #94a3b8; text-decoration: none; font-weight: 600; font-size: 0.78rem;">Drug Safety</a>
-      <a href="/api/clinical/chat-page" style="color: #94a3b8; text-decoration: none; font-weight: 600; font-size: 0.78rem;">Assistant</a>
-      <a href="/api/clinical/prediction-page" style="color: #94a3b8; text-decoration: none; font-weight: 600; font-size: 0.78rem;">30-Day</a>
-      <a href="/api/clinical/stress-page" style="color: #f59e0b; text-decoration: none; font-weight: 700; font-size: 0.78rem; background: rgba(245,158,11,0.15); border: 1px solid #f59e0b; padding: 0.3rem 0.5rem; border-radius: 6px;">🧘 Stress Hub</a>
-      
-      <div id="patient-badge" style="background: rgba(14, 165, 233, 0.15); border: 1px solid #0ea5e9; padding: 0.35rem 0.6rem; border-radius: 8px; font-size: 0.75rem; color: #38bdf8;">Loading...</div>
-      <button onclick="logout()" style="padding: 0.35rem 0.7rem; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #f87171; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.78rem;">Sign Out</button>
-    </div>
-  </header>
-
-  <main style="max-width: 1400px; margin: 1.5rem auto; padding: 0 1.5rem; display: grid; grid-template-columns: 330px 1fr 340px; gap: 1.5rem;">
+    <!-- Unified Navbar -->
     
-    <!-- LEFT PANEL -->
-    <aside style="display: flex; flex-direction: column; gap: 1.25rem;">
-      <div class="card-3d">
-        <h2 style="font-size: 1rem; color: #38bdf8; margin-bottom: 0.5rem;">📄 Report Ingestion Engine</h2>
-        <div id="drop-zone" style="border: 2px dashed rgba(255,255,255,0.2); border-radius: 12px; padding: 1.2rem; text-align: center; background: rgba(2, 6, 23, 0.4); cursor: pointer;" onclick="document.getElementById('file-input').click()">
-          <p style="font-size: 0.85rem; color: #38bdf8; font-weight: 600; margin:0;">📁 Click to Upload Report</p>
-          <span id="file-name-display" style="font-size: 0.75rem; color: #94a3b8; display: block; margin-top: 0.4rem;">PDF, PNG, JPG (Up to 50MB)</span>
-        </div>
-        <input type="file" id="file-input" style="display: none;" accept=".pdf,.png,.jpg,.jpeg,.webp" onchange="handleFileSelect(event)">
-        <button class="btn-submit" style="margin-top: 0.8rem; width:100%; padding: 0.6rem; background: #0ea5e9; border:none; color:#fff; border-radius:8px; font-weight:700; cursor:pointer;" onclick="uploadAndParseReport()">Parse Report Instantly</button>
-      </div>
+    <!-- Unified Navbar -->
+        <!-- Unified Navbar -->
+    
 
-      <div class="card-3d">
-        <h2 style="font-size: 0.95rem; margin-bottom: 0.5rem;">🔍 Document Origin Metadata</h2>
-        <div id="report-metadata" style="font-size: 0.8rem; line-height: 1.6; color: #94a3b8;">
-          <p><strong>Parsed Date:</strong> <span id="meta-date" style="color:#fff;">--</span></p>
-          <p><strong>Hospital / Lab:</strong> <span id="meta-hospital" style="color:#fff;">--</span></p>
-        </div>
-      </div>
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-6 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Left Column: Report Ingestion & Metadata -->
+            <div class="space-y-6">
+                <div class="card-3d rounded-2xl p-6 space-y-4">
+                    <h2 class="text-sm font-bold uppercase tracking-wider text-emerald-400">📁 Report Ingestion Engine</h2>
+                    <div id="dropZone" class="border-2 border-dashed border-emerald-500/40 rounded-xl p-6 text-center hover:border-emerald-400 transition cursor-pointer bg-slate-950/60" onclick="document.getElementById('fileInput').click()">
+                        <p id="fileNameDisplay" class="text-xs text-slate-200 font-semibold">Click to Upload Report</p>
+                        <p class="text-[10px] text-slate-400 mt-1">PDF, JPG, PNG supported</p>
+                        <input type="file" id="fileInput" class="hidden" onchange="handleFileUpload(this)">
+                    </div>
+                    <button type="button" onclick="parseReport()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-3 rounded-lg transition text-xs shadow-lg shadow-emerald-900/40 cursor-pointer">
+                        Parse Report Instantly
+                    </button>
+                </div>
 
-      <div class="card-3d">
-        <h2 style="font-size: 0.95rem; margin-bottom: 0.5rem;">🧪 Ingested Report Parameters</h2>
-        <p style="font-size: 0.7rem; color: #94a3b8; margin-bottom: 0.5rem;">Click any item to explain & graph</p>
-        <div id="parsed-results" style="font-size: 0.8rem; color: #94a3b8; max-height: 250px; overflow-y: auto;">
-          Awaiting document upload...
-        </div>
-      </div>
-    </aside>
+                <div class="card-3d rounded-2xl p-6 space-y-3">
+                    <h2 class="text-sm font-bold uppercase tracking-wider text-emerald-400">🔍 Document Origin Metadata</h2>
+                    <div id="metadataBox" class="text-xs text-slate-300 space-y-1 font-mono bg-slate-950 p-3 rounded-xl border border-slate-800">
+                        <p>Period Date: <span class="text-slate-400 italic">Pending ingestion...</span></p>
+                        <p>Hospital / Lab: <span class="text-slate-400 italic">Pending ingestion...</span></p>
+                    </div>
+                </div>
 
-    <!-- CENTER PANEL -->
-    <section style="display: flex; flex-direction: column; gap: 1.25rem;">
-      <div class="card-3d" style="min-height: 280px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem; margin-bottom: 0.75rem;">
-          <h2 style="font-size: 1.1rem; color: #fff;">💡 Plain-Language Biomarker Explanations</h2>
-          <span style="font-size: 0.75rem; background: rgba(14, 165, 233, 0.2); color: #38bdf8; padding: 0.2rem 0.6rem; border-radius: 6px; font-weight: 700;">Patient View</span>
-        </div>
+                <div class="card-3d rounded-2xl p-6 space-y-3">
+                    <h2 class="text-sm font-bold uppercase tracking-wider text-emerald-400">📊 Ingested Report Parameters</h2>
+                    <div id="parametersBox" class="text-xs text-slate-400 italic bg-slate-950 p-3 rounded-xl border border-slate-800">
+                        Parsed biomarker values will appear here upon ingestion.
+                    </div>
+                </div>
+            </div>
 
-        <div id="explanation-hub" style="line-height: 1.6; color: #e2e8f0;">
-          <div style="text-align: center; padding: 2rem 1rem; color: #64748b;">
-            <p style="font-size: 2rem; margin-bottom: 0.5rem;">📋</p>
-            <h3 style="color: #fff; font-size: 0.95rem; margin-bottom: 0.3rem;">No Biomarker Selected</h3>
-            <p style="font-size: 0.8rem; max-width: 380px; margin: 0 auto;">Upload your medical lab report on the left or click any extracted parameter to view plain-language medical explanations and target ranges.</p>
-          </div>
-        </div>
-      </div>
+            <!-- Middle Column: Biomarker Explanations & Symptom Correlator -->
+            <div class="space-y-6">
+                <div class="card-3d rounded-2xl p-6 space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-sm font-bold uppercase tracking-wider text-emerald-400">💡 Plain-Language Biomarker Explanations</h2>
+                        <span class="text-xs text-emerald-400 cursor-pointer hover:underline">View All Clear</span>
+                    </div>
+                    <div id="biomarkerExplanationBox" class="border border-slate-800 rounded-xl p-6 text-center bg-slate-950 space-y-2">
+                        <div class="text-2xl">📄</div>
+                        <p class="text-xs font-semibold text-slate-200">No Biomarker Selected</p>
+                        <p class="text-[11px] text-slate-400">Upload your medical lab report on the left to extract and view plain-language breakdowns.</p>
+                    </div>
+                </div>
 
-      <div class="card-3d">
-        <h2 style="font-size: 1.05rem; color: #38bdf8; margin-bottom: 0.6rem;">🩺 Dynamic Symptom & Report Correlator</h2>
-        <div style="display: flex; gap: 0.5rem; margin-bottom: 0.8rem;">
-          <input type="text" id="symptoms-input" placeholder="Enter active symptoms (e.g. fatigue, dizziness)" style="flex:1; padding:0.6rem; border-radius:8px; background:rgba(2, 6, 23, 0.6); border:1px solid rgba(255,255,255,0.15); color:#fff; font-size:0.85rem;">
-          <button onclick="correlateSymptoms()" style="padding:0.6rem 1rem; background:#0ea5e9; border:none; color:#fff; border-radius:8px; font-weight:700; cursor:pointer;">Analyze</button>
-        </div>
-        <div id="correlation-output" style="font-size: 0.85rem; line-height: 1.6; color: #cbd5e1;">
-          <p style="color: #64748b; text-align: center; padding: 1rem;">Enter your active symptoms above to correlate with lab findings and get doctor referral guidance.</p>
-        </div>
-      </div>
+                <div class="card-3d rounded-2xl p-6 space-y-4">
+                    <h2 class="text-sm font-bold uppercase tracking-wider text-emerald-400">🩺 Dynamic Symptom & Report Correlator</h2>
+                    <div class="flex space-x-2">
+                        <input type="text" id="symptomInput" placeholder="Type a symptom (e.g. fatigue, headache)..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                        <button onclick="correlateSymptom()" class="bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold px-4 py-2 rounded-lg text-xs transition shadow-md shadow-cyan-900/30">Analyze</button>
+                    </div>
+                    <div id="correlationResult" class="text-xs text-slate-300 hidden bg-slate-950 p-3 rounded-lg border border-slate-800 font-mono"></div>
+                </div>
+            </div>
 
-      <div class="card-3d" style="border-left: 4px solid #10b981;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <div>
-            <h3 style="font-size: 0.95rem; color: #34d399; margin:0;">🧘 Habuild Daily Virtual Yoga & Habit Building</h3>
-            <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 0.2rem;">India's Best Live & Virtual Sessions for Metabolic Recovery</p>
-          </div>
-          <a href="https://habuild.in/" target="_blank" style="padding: 0.45rem 0.9rem; background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #34d399; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 0.8rem;">Explore Habuild ↗</a>
+            <!-- Right Column: 90-Day Trajectory Research -->
+            <div class="space-y-6">
+                <div class="card-3d rounded-2xl p-6 space-y-4">
+                    <h2 class="text-sm font-bold uppercase tracking-wider text-emerald-400">📈 90-Day Trajectory Research</h2>
+                    <p class="text-xs text-slate-400">Longitudinal biomarker shift & risk scoring over time.</p>
+                    <div class="h-64 bg-slate-950 border border-slate-800 rounded-xl flex flex-col items-center justify-center p-4 relative overflow-hidden">
+                        <div class="absolute inset-0 opacity-20 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:16px_16px]"></div>
+                        <svg class="w-full h-32 stroke-emerald-500 fill-none stroke-2 relative z-10" viewBox="0 0 200 100">
+                            <path d="M 0 80 Q 50 60, 100 40 T 200 20" />
+                        </svg>
+                        <span class="text-xs text-emerald-400 font-mono mt-2 relative z-10 font-bold">Trend: Stable Optimizing (+4.2%)</span>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
-    </section>
+    </main>
 
-    <!-- RIGHT PANEL -->
-    <aside style="display: flex; flex-direction: column; gap: 1.25rem;">
-      <div class="card-3d">
-        <h2 style="font-size: 1rem; margin-bottom: 0.75rem;">📈 90-Day Trajectory Research</h2>
-        <div style="height: 380px; width: 100%;">
-          <canvas id="twinChart"></canvas>
-        </div>
-      </div>
-    </aside>
+        <script>
+        let selectedFile = null;
 
-  </main>
+        function handleFileUpload(input) {
+            console.log("File selected:", input.files[0]);
+            if(input.files && input.files[0]) {
+                selectedFile = input.files[0];
+                const display = document.getElementById('fileNameDisplay');
+                if(display) {
+                    display.innerText = "✓ Ready: " + selectedFile.name;
+                    display.style.color = "#4ade80";
+                }
+            }
+        }
 
-  <script src="/static/js/dashboard.js"></script>
+        async function parseReport() {
+            if (!selectedFile) {
+                alert("Please select a file first!");
+                return;
+            }
+            document.getElementById('fileNameDisplay').innerText = "⏳ Parsing report...";
+            const formData = new FormData();
+            formData.append("file", selectedFile);
+            try {
+                const response = await fetch("http://127.0.0.1:8000/api/ocr/upload", {
+                    method: "POST",
+                    body: formData
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || "Server error during parsing");
+                }
+                console.log("Parsed Response:", data);
+                document.getElementById('fileNameDisplay').innerText = "✓ Parsed Successfully!";
+                
+                const paramBox = document.getElementById('parametersBox');
+                if (paramBox) {
+                    paramBox.style.fontFamily = "monospace";
+                    paramBox.style.color = "#4ade80";
+                    paramBox.innerHTML = "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
+                }
+            } catch (err) {
+                console.error("Parse Error:", err);
+                alert("Parsing Error: " + err.message);
+                document.getElementById('fileNameDisplay').innerText = "❌ Parse Failed";
+            }
+        }
+    </script>
 </body>
 </html>
+
+<script>
+function renderBiomarkers(parsedData) {
+    const container = document.getElementById("ingested-parameters-container");
+    if (!container) return;
+    container.innerHTML = "";
+
+    parsedData.forEach(item => {
+        const card = document.createElement("div");
+        card.className = "biomarker-card";
+        card.innerHTML = `
+            <span class="bio-name"><strong>${item.biomarker}</strong></span>
+            <span class="bio-val">${item.value} ${item.unit}</span>
+        `;
+        
+        card.addEventListener("click", () => {
+            if (typeof updateCenterPanel === "function") updateCenterPanel(item);
+            if (typeof updateTrajectoryGraph === "function") updateTrajectoryGraph(item.biomarker);
+        });
+
+        container.appendChild(card);
+    });
+}
+</script>

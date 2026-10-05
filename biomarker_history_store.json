@@ -1,0 +1,634 @@
+{
+  "Hemoglobin": {
+    "dates": [
+      "03/09/2026",
+      "05/10/2026",
+      "20/26/0929"
+    ],
+    "values": [
+      13.5,
+      14.2,
+      13.5
+    ]
+  },
+  "Hematocrit": {
+    "dates": [
+      "20/26/0929",
+      "03/09/2026"
+    ],
+    "values": [
+      37.2,
+      37.2
+    ]
+  },
+  "Mcv L": {
+    "dates": [
+      "20/26/0929",
+      "03/09/2026"
+    ],
+    "values": [
+      76.7,
+      76.7
+    ]
+  },
+  "Mch": {
+    "dates": [
+      "20/26/0929",
+      "03/09/2026"
+    ],
+    "values": [
+      27.8,
+      27.8
+    ]
+  },
+  "Mchc H": {
+    "dates": [
+      "20/26/0929",
+      "03/09/2026"
+    ],
+    "values": [
+      36.3,
+      36.3
+    ]
+  },
+  "Rdwcv H": {
+    "dates": [
+      "20/26/0929",
+      "03/09/2026"
+    ],
+    "values": [
+      15.3,
+      15.3
+    ]
+  },
+  "Pct": {
+    "dates": [
+      "20/26/0929",
+      "03/09/2026"
+    ],
+    "values": [
+      0.285,
+      0.285
+    ]
+  },
+  "Mpv": {
+    "dates": [
+      "06/03/2026",
+      "03/09/2026",
+      "20/26/0929"
+    ],
+    "values": [
+      8.7,
+      11.5,
+      11.5
+    ]
+  },
+  "Neutrophils %": {
+    "dates": [
+      "20/26/0929",
+      "03/09/2026"
+    ],
+    "values": [
+      60.5,
+      60.5
+    ]
+  },
+  "Lymphocytes %": {
+    "dates": [
+      "20/26/0929",
+      "03/09/2026"
+    ],
+    "values": [
+      29.7,
+      29.7
+    ]
+  },
+  "Us Shea Ran Shinoe": {
+    "dates": [
+      "20/26/0929"
+    ],
+    "values": [
+      1.0
+    ]
+  },
+  "Ase No U Received On": {
+    "dates": [
+      "20/26/0929"
+    ],
+    "values": [
+      3.0
+    ]
+  },
+  "Consulting D Reported On": {
+    "dates": [
+      "20/26/0929"
+    ],
+    "values": [
+      3.0
+    ]
+  },
+  "Total Rbcs": {
+    "dates": [
+      "20/26/0929"
+    ],
+    "values": [
+      4.55
+    ]
+  },
+  "Platelet Count": {
+    "dates": [
+      "29/09/2026",
+      "05/10/2026",
+      "20/26/0929"
+    ],
+    "values": [
+      2.5,
+      2.5,
+      248.0
+    ]
+  },
+  "} Pow": {
+    "dates": [
+      "20/26/0929"
+    ],
+    "values": [
+      15.8
+    ]
+  },
+  "Wbc Count": {
+    "dates": [
+      "20/26/0929"
+    ],
+    "values": [
+      7.09
+    ]
+  },
+  "Regno": {
+    "dates": [
+      "20/26/0929"
+    ],
+    "values": [
+      2012.0
+    ]
+  },
+  "Reg No": {
+    "dates": [
+      "00/00/0431"
+    ],
+    "values": [
+      2021087257.0
+    ]
+  },
+  "Regno Ad/Mlt/": {
+    "dates": [
+      "00/00/0431"
+    ],
+    "values": [
+      7.0
+    ]
+  },
+  "Ph": {
+    "dates": [
+      "05/10/2026",
+      "00/00/0431",
+      "31/04/0000"
+    ],
+    "values": [
+      6.5,
+      6.0,
+      6.0
+    ]
+  },
+  "To": {
+    "dates": [
+      "00/00/0431"
+    ],
+    "values": [
+      6.0
+    ]
+  },
+  "Reg.No Ad/Mlt/": {
+    "dates": [
+      "00/00/0431"
+    ],
+    "values": [
+      7.0
+    ]
+  },
+  "Quantity": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      20.0
+    ]
+  },
+  "Haemoglobin": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      12.0
+    ]
+  },
+  "Direct Bilirubin": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      1.81
+    ]
+  },
+  "PCV/HCT": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      6.0
+    ]
+  },
+  "MCV": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      76.0
+    ]
+  },
+  "MCH": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      0.63
+    ]
+  },
+  "Specific Gravity": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      1.02
+    ]
+  },
+  "MCHC": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      32.2
+    ]
+  },
+  "SGPT": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      120.5
+    ]
+  },
+  "Proteins": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      120.5
+    ]
+  },
+  "Total W.B.C. Count": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      4000.0
+    ]
+  },
+  "Neutrophils": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      69.0
+    ]
+  },
+  "Lymphocytes": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      28.0
+    ]
+  },
+  "Monocytes": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      1.0
+    ]
+  },
+  "Eosinophils": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      6.0
+    ]
+  },
+  "Basophils": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      2.0
+    ]
+  },
+  "MPV": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      8.7
+    ]
+  },
+  "S.Total Rbc Quantity Parameters Bilirubin": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      20.0
+    ]
+  },
+  "Haemoglobin Colour Pale Yellow": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      11.6
+    ]
+  },
+  "Total Appearance R.B.C. Count Sl.Hazy": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      3.8
+    ]
+  },
+  "S.Direct Bilirubin": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      1.81
+    ]
+  },
+  "Pcv/Hct Reaction (Packed (Ph) Cell Volume) Ph": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      6.0
+    ]
+  },
+  "Method: Jendrassik & Grof, Serum": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      99.2
+    ]
+  },
+  "Mcv Sediment (Mean Corpuscular Volume) Absent": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      99.2
+    ]
+  },
+  "S.Indirect Mch (Mean Bilirubin Corpuscular Volume)": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      0.63
+    ]
+  },
+  "Mchc (Mean Corpuscular Hb. Conc.)": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      32.2
+    ]
+  },
+  "Sgpt Proteins Trace": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      120.5
+    ]
+  },
+  "Eosinophils Occult Blood Absent": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      2.0
+    ]
+  },
+  "Basophils Microscopic Examination": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      2.0
+    ]
+  },
+  "Band Pus Cells Forms": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      2.0
+    ]
+  },
+  "Absolute Epithelial Neutrophils Cells": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      1.0
+    ]
+  },
+  "Absolute Red Blood Lymphocyte Cells Absent": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      2016.0
+    ]
+  },
+  "Absolute Monocytes": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      72.0
+    ]
+  },
+  "Absolute Eosinophils": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      144.0
+    ]
+  },
+  "Crystals Absent": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      20.0
+    ]
+  },
+  "Platelet Candida Count Absent": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      211000.0
+    ]
+  },
+  "Mpv Mucus Strands Absent": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      8.7
+    ]
+  },
+  "S.Total Rbc Parameters Bilirubin": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      20.0
+    ]
+  },
+  "Method: Colour Jendrassik & Grof, Serum Pale Yellow": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      11.6
+    ]
+  },
+  "Mchc Specific (Mean Gravity Corpuscular Hb. Conc.)": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      1.02
+    ]
+  },
+  "Rdw (Red Cell Distribution Width)": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      11.6
+    ]
+  },
+  "Ketones Absent": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      7200.0
+    ]
+  },
+  "Absolute Lymphocyte": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      2016.0
+    ]
+  },
+  "Absolute Crystals Basophils Absent": {
+    "dates": [
+      "06/03/2026"
+    ],
+    "values": [
+      20.0
+    ]
+  },
+  "Hemoglobin (Hb)": {
+    "dates": [
+      "29/09/2026"
+    ],
+    "values": [
+      14.2
+    ]
+  },
+  "Total Leukocyte Count (Tlc)": {
+    "dates": [
+      "29/09/2026"
+    ],
+    "values": [
+      7800.0
+    ]
+  },
+  "Fastings Blood Sugar": {
+    "dates": [
+      "29/09/2026",
+      "05/10/2026"
+    ],
+    "values": [
+      95.0,
+      95.0
+    ]
+  },
+  "Serum Creatinine": {
+    "dates": [
+      "29/09/2026",
+      "05/10/2026"
+    ],
+    "values": [
+      0.9,
+      0.9
+    ]
+  },
+  "Total Bilirubin": {
+    "dates": [
+      "29/09/2026",
+      "05/10/2026"
+    ],
+    "values": [
+      0.8,
+      0.8
+    ]
+  },
+  "Sgpt (Alt)": {
+    "dates": [
+      "29/09/2026",
+      "05/10/2026"
+    ],
+    "values": [
+      28.0,
+      28.0
+    ]
+  },
+  "Total Leucocyte Count": {
+    "dates": [
+      "05/10/2026"
+    ],
+    "values": [
+      7800.0
+    ]
+  }
+}

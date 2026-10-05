@@ -1,32 +1,161 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Helix Health OS Dashboard</title>
-    <style>
-        body { font-family: Arial, sans-serif; background: #0f172a; color: #f8fafc; padding: 40px; }
-        .card { background: #1e293b; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-        h1 { color: #38bdf8; }
-        button { background: #0ea5e9; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; }
-        button:hover { background: #0284c7; }
-    </style>
+    <title>Helix Enterprise OS - Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body>
-    <h1>Helix Health OS - Enterprise Dashboard</h1>
-    <div class="card">
-        <h3>System Status</h3>
-        <p>All modules (OCR Uploads, 90-Day Trajectory, AI Chatbot, SOAP Notes, Doctor Finder) are fully active and loaded.</p>
+<body class="bg-slate-950 text-slate-100 font-sans antialiased min-h-screen">
+    <div class="max-w-7xl mx-auto p-6">
+        <header class="flex justify-between items-center mb-8 border-b border-slate-800 pb-4">
+            <h1 class="text-2xl font-bold tracking-wider text-emerald-400">HELIX // ENTERPRISE OS</h1>
+            <span class="text-xs text-slate-400 bg-slate-900 px-3 py-1 rounded border border-slate-800">SYSTEM SECURE</span>
+        </header>
+
+        <!-- REPORT INGESTION ENGINE -->
+        <section class="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-8 shadow-xl">
+            <h2 class="text-lg font-semibold text-emerald-400 mb-4">// REPORT INGESTION ENGINE</h2>
+            <div class="flex flex-col sm:flex-row gap-4 items-center">
+                <input type="file" id="reportFile" class="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-emerald-500/10 file:text-emerald-400 hover:file:bg-emerald-500/20 cursor-pointer border border-slate-800 rounded-lg p-2 bg-slate-950"/>
+                <button onclick="uploadReport()" class="w-full sm:w-auto px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold rounded-lg transition shadow-lg">Parse Report Instantly</button>
+            </div>
+            <div id="statusMessage" class="mt-4 text-sm text-slate-400"></div>
+        </section>
+
+        <!-- GRID LAYOUT FOR PARAMETERS & ANALYTICS -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- INGESTED REPORT PARAMETERS CARDS -->
+            <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
+                <h2 class="text-lg font-semibold text-emerald-400 mb-4">// INGESTED REPORT PARAMETERS</h2>
+                <div id="parametersGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[550px] overflow-y-auto pr-2">
+                    <p class="text-slate-500 text-sm italic">No report parsed yet. Upload a PDF report above.</p>
+                </div>
+            </div>
+
+            <!-- INTERACTIVE ANALYTICS & EXPLANATION PANEL -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl flex flex-col justify-between">
+                <div>
+                    <h2 class="text-lg font-semibold text-emerald-400 mb-4">// BIOMARKER INTELLIGENCE</h2>
+                    <div id="selectedTitle" class="text-xl font-bold text-white mb-2">Select a Parameter</div>
+                    <div id="selectedExplanation" class="text-sm text-slate-300 bg-slate-950 border border-slate-800 p-4 rounded-lg mb-6 min-h-[90px]">
+                        Click any extracted biomarker card on the left to view temporal changes over time.
+                    </div>
+                </div>
+                <div class="relative bg-slate-950 border border-slate-800 rounded-lg p-4 h-64 flex items-center justify-center">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="card">
-        <h3>Quick Test</h3>
-        <button onclick="testTrajectory()">Fetch 90-Day Trajectory</button>
-        <pre id="output" style="background:#0f172a; padding:10px; margin-top:10px; border-radius:4px;"></pre>
-    </div>
+
     <script>
-        async function testTrajectory() {
-            const res = await fetch('/api/trajectory');
-            const data = await res.json();
-            document.getElementById('output').innerText = JSON.stringify(data, null, 2);
+        let trendChartInstance = null;
+
+        async function uploadReport() {
+            const fileInput = document.getElementById('reportFile');
+            const statusDiv = document.getElementById('statusMessage');
+            if (fileInput.files.length === 0) {
+                statusDiv.innerHTML = '<span class="text-red-400">Please select a PDF report file first.</span>';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            statusDiv.innerHTML = '<span class="text-yellow-400 animate-pulse">Parsing document with OCR engine...</span>';
+
+            try {
+                const response = await fetch('/api/ocr/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    statusDiv.innerHTML = `<span class="text-emerald-400">Successfully parsed: ${data.filename} (Date: ${data.report_date})</span>`;
+                    renderParameters(data.parsed_data);
+                } else {
+                    statusDiv.innerHTML = `<span class="text-red-400">Error: ${data.detail || 'Parsing failed'}</span>`;
+                }
+            } catch (err) {
+                statusDiv.innerHTML = `<span class="text-red-400">Network error connecting to parser backend.</span>`;
+            }
+        }
+
+        function renderParameters(parameters) {
+            const grid = document.getElementById('parametersGrid');
+            grid.innerHTML = '';
+
+            if (!parameters || parameters.length === 0) {
+                grid.innerHTML = '<p class="text-slate-500 text-sm italic">No clinical parameters detected.</p>';
+                return;
+            }
+
+            parameters.forEach((param) => {
+                const card = document.createElement('div');
+                card.className = "bg-slate-950 border border-slate-800 hover:border-emerald-500/50 p-4 rounded-lg cursor-pointer transition shadow";
+                card.innerHTML = `
+                    <div class="text-xs text-slate-400 font-mono">${param.biomarker}</div>
+                    <div class="text-2xl font-bold text-white mt-1">${param.value} <span class="text-sm font-normal text-slate-400">${param.unit || ''}</span></div>
+                `;
+                card.onclick = () => selectBiomarker(param);
+                grid.appendChild(card);
+            });
+
+            // Auto-select the first biomarker
+            selectBiomarker(parameters[0]);
+        }
+
+        function selectBiomarker(param) {
+            document.getElementById('selectedTitle').innerText = param.biomarker;
+            document.getElementById('selectedExplanation').innerText = param.explanation || `Clinical timeline measurement for ${param.biomarker}.`;
+
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            if (trendChartInstance) {
+                trendChartInstance.destroy();
+            }
+
+            // Extract true historical arrays or fallback to current value
+            const historyValues = (param.history && param.history.length > 0) ? param.history : [param.value];
+            const historyDates = (param.history_dates && param.history_dates.length === historyValues.length) 
+                ? param.history_dates 
+                : historyValues.map((_, i) => `Point ${i + 1}`);
+
+            trendChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: historyDates,
+                    datasets: [{
+                        label: param.biomarker,
+                        data: historyValues,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.2,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#10b981'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: { 
+                            grid: { color: '#1e293b' }, 
+                            ticks: { color: '#94a3b8', font: { size: 10 } },
+                            title: { display: true, text: 'Chronological Date', color: '#64748b', font: { size: 11 } }
+                        },
+                        y: { 
+                            grid: { color: '#1e293b' }, 
+                            ticks: { color: '#94a3b8', font: { size: 10 } }
+                        }
+                    }
+                }
+            });
         }
     </script>
 </body>

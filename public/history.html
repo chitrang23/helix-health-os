@@ -69,16 +69,10 @@
             <a href="/stress.html" class="hover:text-emerald-400 transition">Stress & Flow</a>
             <a href="/soap.html" class="hover:text-emerald-400 transition">SOAP & Billing</a>
             <a href="/register.html" class="hover:text-emerald-400 transition">Register</a>
-            <a href="/dashboard.html" class="bg-rose-600/20 text-rose-400 border border-rose-500/30 px-3 py-1 rounded-lg hover:bg-rose-600/30 transition font-bold">Sign Out</a>
+            <a href="#" onclick="logout()" class="bg-rose-600/20 text-rose-400 border border-rose-500/30 px-3 py-1 rounded-lg hover:bg-rose-600/30 transition font-bold">Sign Out</a>
         </div>
     </nav>
     <!-- Unified Navbar -->
-    
-    <!-- Unified Navbar -->
-    
-    <!-- Unified Navbar -->
-    
-  
 
   <main style="max-width: 900px; margin: 2rem auto; padding: 0 1rem;">
     <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 1.5rem; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
@@ -108,12 +102,21 @@
     async function loadMedicalHistory() {
       const timelineList = document.getElementById("timeline-list");
       try {
-        const res = await fetch(`/api/records/history/${user.user_id}`);
+        const res = await fetch('/api/records/history/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
         const data = await res.json();
 
         if (res.ok && data.history && data.history.length > 0) {
           let html = "";
           data.history.forEach(item => {
+            let biomarkersHtml = "";
+            if (item.biomarkers && Object.keys(item.biomarkers).length > 0) {
+              biomarkersHtml = `<div style="margin-top: 0.5rem; font-size: 0.75rem; color: #38bdf8; font-family: 'JetBrains Mono', monospace;">Parameters Ingested: ${Object.keys(item.biomarkers).length} biomarkers tracked</div>`;
+            }
+
             html += `
               <div class="timeline-item">
                 <div class="timeline-dot"></div>
@@ -124,6 +127,7 @@
                   </div>
                   <p style="font-size: 0.85rem; color: #f1f5f9; margin-bottom: 0.5rem;">${item.description}</p>
                   <span style="font-size: 0.75rem; color: #94a3b8;">📍 Facility / Hospital: <strong>${item.hospital_name || 'General Clinic'}</strong></span>
+                  ${biomarkersHtml}
                 </div>
               </div>
             `;

@@ -34,7 +34,7 @@
                 radial-gradient(circle at 85% 85%, rgba(79, 172, 254, 0.06) 0%, transparent 45%);
         }
 
-        navbar {
+        nav.app-navbar {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -62,7 +62,7 @@
 
         .nav-links {
             display: flex;
-            gap: 6px;
+            gap: 4px;
             list-style: none;
             flex-wrap: wrap;
         }
@@ -71,9 +71,9 @@
             color: var(--text-muted);
             text-decoration: none;
             font-weight: 500;
-            font-size: 0.78rem;
+            font-size: 0.75rem;
             transition: all 0.3s ease;
-            padding: 8px 12px;
+            padding: 8px 10px;
             border-radius: 8px;
         }
 
@@ -81,6 +81,29 @@
             color: var(--text-main);
             background: rgba(255, 255, 255, 0.06);
             border: 1px solid var(--border);
+        }
+
+        .navbar-right-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .global-lang-select {
+            background: rgba(0, 242, 254, 0.08);
+            border: 1px solid rgba(0, 242, 254, 0.2);
+            color: var(--primary);
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .global-lang-select option {
+            background: var(--bg-deep);
+            color: var(--text-main);
         }
 
         .user-profile-badge {
@@ -127,7 +150,7 @@
             font-weight: 700;
         }
 
-        input[type="file"], input[type="text"], select {
+        input[type="file"], input[type="text"], input[type="number"], input[type="range"], select {
             color: var(--text-main);
             padding: 12px 16px;
             background: rgba(0, 0, 0, 0.3);
@@ -188,24 +211,61 @@
             font-size: 0.8rem;
             margin-bottom: 25px;
         }
+
+        /* Breathing Circle Animation for Stress Feature */
+        .breath-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+        .breathing-circle {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(0,242,254,0.2), rgba(79,172,254,0.4));
+            border: 2px solid var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: var(--primary);
+            transition: transform 4s ease-in-out;
+            box-shadow: 0 0 30px rgba(0,242,254,0.2);
+            margin-bottom: 20px;
+        }
+        .breathing-circle.inhale { transform: scale(1.35); }
+        .breathing-circle.exhale { transform: scale(0.85); }
     </style>
 </head>
 <body>
 
-    <navbar>
+    <nav class="app-navbar">
         <div class="brand"><span>⚡ HELIX // ENTERPRISE OS</span></div>
         <ul class="nav-links">
             <li><a href="#" onclick="switchTab('dashboard', this)" class="active">Dashboard & OCR</a></li>
             <li><a href="#" onclick="switchTab('history', this)">Patient History</a></li>
+            <li><a href="#" onclick="switchTab('stress', this)">🧘 Stress & Mindfulness</a></li>
             <li><a href="#" onclick="switchTab('chatbot', this)">Gemini Clinical Chat</a></li>
             <li><a href="#" onclick="switchTab('synthesizer', this)">✨ AI Pathology Synthesizer</a></li>
-            <li><a href="#" onclick="switchTab('simulation', this)">90-Day Twin</a></li>
+            <li><a href="#" onclick="switchTab('simulation', this)">30-Day Twin</a></li>
             <li><a href="#" onclick="switchTab('specialists', this)">Specialists</a></li>
         </ul>
-        <div class="user-profile-badge">
-            <span>👤 <span id="userNameBadge">Active User</span></span>
+        <div class="navbar-right-controls">
+            <select id="globalLangSelector" onchange="switchGlobalLanguage(this.value)" class="global-lang-select">
+                <option value="en">English</option>
+                <option value="hi">हिंदी (Hindi)</option>
+                <option value="mr">मराठी (Marathi)</option>
+            </select>
+            <div class="user-profile-badge">
+                <span>👤 <span id="userNameBadge">Active User</span></span>
+            </div>
         </div>
-    </navbar>
+    </nav>
 
     <div class="container">
         <div class="disclaimer-box">
@@ -273,7 +333,45 @@
             </div>
         </div>
 
-        <!-- 3. GEMINI CLINICAL CHATBOT -->
+        <!-- 3. STRESS & MINDFULNESS -->
+        <div id="stress" class="section-view">
+            <div class="grid-2" style="margin-bottom: 25px;">
+                <div class="card-3d">
+                    <div class="section-title">// CORTISOL & STRESS INDEX EVALUATOR</div>
+                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">Rate your current psychological and somatic stress factors to generate instant neuro-endocrine mitigation protocols.</p>
+                    
+                    <div style="margin-bottom: 18px;">
+                        <label style="display:block; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 6px;">Work / Cognitive Load Level (1-10): <span id="workLoadVal" style="color:var(--primary); font-weight:700;">5</span></label>
+                        <input type="range" id="workLoadRange" min="1" max="10" value="5" oninput="document.getElementById('workLoadVal').innerText=this.value">
+                    </div>
+
+                    <div style="margin-bottom: 18px;">
+                        <label style="display:block; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 6px;">Sleep Quality Score (1-10): <span id="sleepScoreVal" style="color:var(--accent); font-weight:700;">7</span></label>
+                        <input type="range" id="sleepScoreRange" min="1" max="10" value="7" oninput="document.getElementById('sleepScoreVal').innerText=this.value">
+                    </div>
+
+                    <button class="btn-glow" onclick="calculateStressIndex()" style="width:100%;">Run Stress & Cortisol Correlation</button>
+                </div>
+
+                <div class="card-3d">
+                    <div class="section-title">// GUIDED 4-7-8 RESPIRATORY PACER</div>
+                    <div class="breath-container">
+                        <div id="breathCircle" class="breathing-circle">Ready</div>
+                        <p id="breathInstruction" style="font-size: 0.85rem; color: var(--text-muted); text-align: center; margin-bottom: 15px;">Click start to engage parasympathetic vagus nerve stimulation.</p>
+                        <button class="btn-glow" onclick="toggleBreathingExercise()" id="breathBtn" style="padding: 8px 20px; font-size: 0.8rem;">Start Breathing Exercise</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-3d">
+                <div class="section-title">// STRESS MITIGATION & BIO-FEEDBACK INSIGHTS</div>
+                <div id="stressResultsOutput" style="background: rgba(0,0,0,0.25); padding: 20px; border-radius: 12px; border: 1px solid var(--border); font-size: 0.9rem; color: var(--text-muted); line-height: 1.7;">
+                    Complete the stress evaluator parameters above or run a check to receive targeted somatic and biochemical mitigation guidance.
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. GEMINI CLINICAL CHATBOT -->
         <div id="chatbot" class="section-view">
             <div class="card-3d" style="display: flex; flex-direction: column; height: 620px;">
                 <div class="section-title">// GEMINI-BACKED RAG CLINICAL ASSISTANT</div>
@@ -287,7 +385,7 @@
             </div>
         </div>
 
-        <!-- 4. AI PATHOLOGY SYNTHESIZER -->
+        <!-- 5. AI PATHOLOGY SYNTHESIZER -->
         <div id="synthesizer" class="section-view">
             <div class="card-3d">
                 <div class="section-title">// ✨ AI MULTI-MODAL PATHOLOGY & SCAN SYNTHESIZER</div>
@@ -314,32 +412,74 @@
             </div>
         </div>
 
-        <!-- 5. 90-DAY METABOLIC TWIN -->
+        <!-- 6. 30-DAY HEALTH TWIN -->
         <div id="simulation" class="section-view">
-            <div class="card-3d">
-                <div class="section-title">// 90-DAY METABOLIC SIMULATION</div>
-                <div class="grid-3" style="margin-bottom: 25px;">
-                    <div style="background: rgba(0,0,0,0.25); padding: 20px; border-radius: 12px; border: 1px solid var(--border);">
-                        <h4 style="color: var(--primary); margin-bottom: 10px;">Physical Activity</h4>
-                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Daily Calisthenics & Virtual Yoga (<a href="https://habuild.in/" target="_blank" style="color: var(--secondary);">Habuild Protocol</a>)</p>
-                        <span style="color: var(--accent); font-weight: 700;">Expected Impact: -14% Glucose Drift</span>
+            <div class="grid-2" style="margin-bottom: 25px;">
+                <!-- LEFT: Lifestyle & Parameter Input -->
+                <div class="card-3d">
+                    <div class="section-title">// 30-DAY HABIT & BIOMARKER TWIN</div>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">Provide your current habits and target biomarker to project your 30-day health trajectory using Gemini.</p>
+
+                    <div style="margin-bottom: 15px;">
+                        <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 5px;">Target Biomarker to Simulate</label>
+                        <input type="text" id="pred-marker" value="Hemoglobin" style="width: 100%;">
                     </div>
-                    <div style="background: rgba(0,0,0,0.25); padding: 20px; border-radius: 12px; border: 1px solid var(--border);">
-                        <h4 style="color: var(--primary); margin-bottom: 10px;">Dietary Optimization</h4>
-                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Low glycemic load, high fiber, supervised hydration.</p>
-                        <span style="color: var(--accent); font-weight: 700;">Expected Impact: Lipid Stabilization</span>
+
+                    <div style="margin-bottom: 15px;">
+                        <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 5px;">Current Baseline Value</label>
+                        <input type="number" step="0.1" id="pred-baseline" value="13.5" style="width: 100%;">
                     </div>
-                    <div style="background: rgba(0,0,0,0.25); padding: 20px; border-radius: 12px; border: 1px solid var(--border);">
-                        <h4 style="color: var(--primary); margin-bottom: 10px;">90-Day Velocity Risk</h4>
-                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Calculated using statistical residual deviation.</p>
-                        <span style="color: var(--warning); font-weight: 700;">Status: Low Risk / Controlled</span>
+
+                    <div style="margin-bottom: 15px;">
+                        <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 5px;">Average Daily Sleep</label>
+                        <select id="lifestyle-sleep" style="width: 100%;">
+                            <option value="Poor (< 5 hours)">Poor (&lt; 5 hours)</option>
+                            <option value="Moderate (6-7 hours)">Moderate (6-7 hours)</option>
+                            <option value="Optimal (7-9 hours)" selected>Optimal (7-9 hours)</option>
+                        </select>
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 5px;">Physical Activity Frequency</label>
+                        <select id="lifestyle-activity" style="width: 100%;">
+                            <option value="Sedentary (No regular exercise)">Sedentary (No regular exercise)</option>
+                            <option value="Moderate (Walks / Yoga 3x/week)" selected>Moderate (Walks / Yoga 3x/week)</option>
+                            <option value="Active (Daily workouts / Gym)">Active (Daily workouts / Gym)</option>
+                        </select>
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 5px;">Diet Quality & Hydration</label>
+                        <select id="lifestyle-diet" style="width: 100%;">
+                            <option value="Processed / Fast Food heavy">Processed / Fast Food heavy</option>
+                            <option value="Balanced home-cooked meals" selected>Balanced home-cooked meals</option>
+                            <option value="Strict micronutrient & protein focused">Strict micronutrient &amp; protein focused</option>
+                        </select>
+                    </div>
+
+                    <button class="btn-glow" onclick="run30DayTwinSimulation()" style="width: 100%;">Simulate 30-Day Trajectory</button>
+                </div>
+
+                <!-- RIGHT: AI Insights & Recommendations -->
+                <div class="card-3d flex flex-col justify-between">
+                    <div>
+                        <div class="section-title">// AI CLINICAL 30-DAY INSIGHT</div>
+                        <div id="prediction-output" style="font-size: 0.85rem; line-height: 1.6; color: var(--text-muted); background: rgba(0,0,0,0.25); padding: 16px; border-radius: 10px; border: 1px solid var(--border); min-height: 140px;">
+                            Configure your lifestyle inputs on the left and click simulate to view your projected 30-day health evolution.
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 20px;">
+                        <div class="section-title" style="margin-bottom: 10px;">// 30-DAY SIMULATION GRAPH</div>
+                        <div style="position: relative; height: 210px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 10px; padding: 10px;">
+                            <canvas id="simulationChart"></canvas>
+                        </div>
                     </div>
                 </div>
-                <div style="position: relative; height: 320px;"><canvas id="simulationChart"></canvas></div>
             </div>
         </div>
 
-        <!-- 6. DOCTOR SPECIALISTS -->
+        <!-- 7. DOCTOR SPECIALISTS -->
         <div id="specialists" class="section-view">
             <div class="card-3d">
                 <div class="section-title">// REGIONAL DOCTOR & SPECIALIST MATCHER</div>
@@ -372,58 +512,263 @@
         </div>
     </div>
 
+    <!-- GLOBAL MULTILINGUAL TRANSLATION INTERCEPTOR & AUTOMATIC UI TRANSLATOR -->
+    <script>
+        function getCurrentLang() {
+            return localStorage.getItem("app_lang") || "en";
+        }
+
+        function switchGlobalLanguage(langCode) {
+            localStorage.setItem("app_lang", langCode);
+            location.reload();
+        }
+
+        // Global Fetch Interceptor for API payload translations
+        const originalFetch = window.fetch;
+        window.fetch = async function(...args) {
+            const response = await originalFetch.apply(this, args);
+            const currentLang = getCurrentLang();
+
+            if (currentLang === 'en' || (typeof args[0] === 'string' && args[0].includes('/api/translate/'))) {
+                return response;
+            }
+
+            try {
+                const clone = response.clone();
+                const data = await clone.json();
+
+                const transRes = await originalFetch('/api/translate/object', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        data: data,
+                        target_language: currentLang
+                    })
+                });
+                const transJson = await transRes.json();
+
+                return new Response(JSON.stringify(transJson.translated_data), {
+                    status: response.status,
+                    statusText: response.statusText,
+                    headers: response.headers
+                });
+            } catch (e) {
+                return response;
+            }
+        };
+
+        // Automatic Static UI Text Translation on Load
+        document.addEventListener("DOMContentLoaded", async () => {
+            const currentLang = getCurrentLang();
+            const langSelector = document.getElementById("globalLangSelector");
+            if (langSelector) langSelector.value = currentLang;
+
+            if (currentLang === 'en') return;
+
+            const elementsToTranslate = document.querySelectorAll("h1, h2, h3, h4, p, label, button, a, th, td");
+            const texts = Array.from(elementsToTranslate).map(el => el.innerText.trim()).filter(t => t.length > 0 && !t.startsWith("{"));
+
+            if (texts.length === 0) return;
+
+            try {
+                const res = await originalFetch('/api/translate/batch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        texts: texts,
+                        target_language: currentLang
+                    })
+                });
+                const json = await res.json();
+                const translations = json.translations;
+
+                let index = 0;
+                elementsToTranslate.forEach(el => {
+                    const text = el.innerText.trim();
+                    if (text.length > 0 && !text.startsWith("{") && translations && translations[index]) {
+                        el.innerText = translations[index];
+                        index++;
+                    }
+                });
+            } catch (err) {
+                console.error("UI Translation failed:", err);
+            }
+        });
+    </script>
+
     <script>
         let trendChartInstance = null;
+        let simulationChartInstance = null;
+        const token = localStorage.getItem("helix_token");
+        let activeReportDate = "21/09/2026"; // Store dynamic report date globally
 
-        // Load dynamic user session name on startup
+        // Load dynamic user session name on startup & check authentication token
         window.addEventListener('DOMContentLoaded', () => {
-            const loggedInUser = localStorage.getItem('userName') || localStorage.getItem('username') || 'User Profile';
+            if (!token) {
+                console.warn("No authentication token found in localStorage. Proceeding with guest/session mode.");
+            }
+
+            const loggedInUser = localStorage.getItem('userName') || localStorage.getItem('username') || 'Active User';
             document.getElementById('userNameBadge').innerText = loggedInUser;
             document.getElementById('metaPatientName').innerText = loggedInUser;
 
-            // Initialize background charts
-            const histCtx = document.getElementById('historyChart').getContext('2d');
-            new Chart(histCtx, {
-                type: 'line',
-                data: {
-                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
-                    datasets: [{
-                        label: 'Longitudinal Metabolic Index',
-                        data: [120, 118, 115, 112, 110, 108, 105, 104, 102, 99],
-                        borderColor: '#00f2fe',
-                        backgroundColor: 'rgba(0, 242, 254, 0.1)',
-                        fill: true,
-                        tension: 0.3
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: 'rgba(255,255,255,0.05)' } }, y: { grid: { color: 'rgba(255,255,255,0.05)' } } } }
-            });
-
-            const simCtx = document.getElementById('simulationChart').getContext('2d');
-            new Chart(simCtx, {
-                type: 'line',
-                data: {
-                    labels: ['Day 1', 'Day 15', 'Day 30', 'Day 45', 'Day 60', 'Day 75', 'Day 90'],
-                    datasets: [{
-                        label: 'Projected Glucose Stabilization',
-                        data: [142, 135, 128, 120, 115, 110, 105],
-                        borderColor: '#10b981',
-                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                        fill: true,
-                        tension: 0.3
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: 'rgba(255,255,255,0.05)' } }, y: { grid: { color: 'rgba(255,255,255,0.05)' } } } }
-            });
+            // Initial background charts initialization
+            renderSimulationChart("Hemoglobin", 13.5, 14.1);
         });
 
         function switchTab(tabId, element) {
             document.querySelectorAll('.section-view').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.nav-links a').forEach(el => el.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
-            element.classList.add('active');
+            if (element) element.classList.add('active');
         }
 
+        // Stress Feature JavaScript Logic
+        function calculateStressIndex() {
+            const workload = parseInt(document.getElementById('workLoadRange').value);
+            const sleep = parseInt(document.getElementById('sleepScoreRange').value);
+            const output = document.getElementById('stressResultsOutput');
+
+            const score = (workload * 6) - (sleep * 3) + 25;
+            let status = "Optimal / Low Risk";
+            let color = "var(--accent)";
+            if (score > 55) {
+                status = "Elevated Cortisol / Moderate Stress";
+                color = "var(--warning)";
+            }
+            if (score > 75) {
+                status = "High Sympathetic Overdrive / Intervention Recommended";
+                color = "var(--danger)";
+            }
+
+            output.innerHTML = `
+                <strong style="color: var(--primary);">Calculated Neuro-Somatic Stress Index:</strong> <span style="color: ${color}; font-weight:700;">${score}/100 (${status})</span><br><br>
+                <strong style="color: var(--text-main);">Personalized Action Protocol:</strong><br>
+                1. Integrate 15 minutes of box breathing or vagus nerve stimulation daily.<br>
+                2. Optimize circadian rhythm by maintaining consistent sleep/wake schedules.<br>
+                3. Cross-correlate with your metabolic trend graph to monitor long-term autonomic stability.
+            `;
+        }
+
+        let breathInterval = null;
+        function toggleBreathingExercise() {
+            const btn = document.getElementById('breathBtn');
+            const circle = document.getElementById('breathCircle');
+            const inst = document.getElementById('breathInstruction');
+
+            if (breathInterval) {
+                clearInterval(breathInterval);
+                breathInterval = null;
+                btn.innerText = "Start Breathing Exercise";
+                circle.innerText = "Ready";
+                circle.className = "breathing-circle";
+                inst.innerText = "Click start to engage parasympathetic vagus nerve stimulation.";
+                return;
+            }
+
+            btn.innerText = "Stop Exercise";
+            let phase = 0; // 0: Inhale, 1: Hold, 2: Exhale
+            
+            const runCycle = () => {
+                if (phase === 0) {
+                    circle.innerText = "Inhale";
+                    circle.className = "breathing-circle inhale";
+                    inst.innerText = "Breathe in deeply through your nose for 4 seconds...";
+                    phase = 1;
+                } else if (phase === 1) {
+                    circle.innerText = "Hold";
+                    inst.innerText = "Hold your breath gently for 4 seconds...";
+                    phase = 2;
+                } else {
+                    circle.innerText = "Exhale";
+                    circle.className = "breathing-circle exhale";
+                    inst.innerText = "Slowly exhale completely through your mouth for 4 seconds...";
+                    phase = 0;
+                }
+            };
+
+            runCycle();
+            breathInterval = setInterval(runCycle, 4000);
+        }
+
+        // 30-Day Health Twin Simulation Functionality
+        async function run30DayTwinSimulation() {
+            const marker = document.getElementById("pred-marker").value;
+            const baseline = parseFloat(document.getElementById("pred-baseline").value);
+            const sleep = document.getElementById("lifestyle-sleep").value;
+            const activity = document.getElementById("lifestyle-activity").value;
+            const diet = document.getElementById("lifestyle-diet").value;
+
+            const output = document.getElementById("prediction-output");
+            output.innerHTML = `<span style="color: var(--primary);">⏳ Running 30-day predictive simulation model via Gemini...</span>`;
+
+            const headers = { "Content-Type": "application/json" };
+            if (token) headers["Authorization"] = `Bearer ${token}`;
+
+            try {
+                const res = await fetch("/api/clinical/predict-30-days", {
+                    method: "POST",
+                    headers: headers,
+                    body: JSON.stringify({ marker, baseline, sleep, activity, diet })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    output.innerHTML = `
+                        <strong style="color: var(--primary);">Projected 30-Day Status:</strong> <span style="color: var(--accent); font-weight:700;">${data.status || 'Stable'}</span><br>
+                        <p style="margin: 8px 0; color: var(--text-main);">${data.explanation || data.prediction_report}</p>
+                        <strong style="color: var(--warning);">Actionable Adjustment:</strong><br>
+                        <span style="color: var(--text-muted);">${data.recommendation || 'Maintain consistent lifestyle patterns.'}</span>
+                    `;
+
+                    const finalVal = data.projected_day_30 || (baseline * 1.05);
+                    renderSimulationChart(marker, baseline, finalVal);
+                } else {
+                    output.innerHTML = `<span style="color: var(--danger);">⚠️ ${data.detail || 'Error running 30-day simulation.'}</span>`;
+                }
+            } catch (err) {
+                console.error(err);
+                output.innerHTML = `<span style="color: var(--danger);">❌ Connection error while communicating with simulation server.</span>`;
+            }
+        }
+
+        function renderSimulationChart(marker, base, finalVal) {
+            const ctx = document.getElementById("simulationChart").getContext("2d");
+            if (simulationChartInstance) simulationChartInstance.destroy();
+
+            const day10 = Number((base + (finalVal - base) * 0.33).toFixed(2));
+            const day20 = Number((base + (finalVal - base) * 0.66).toFixed(2));
+
+            simulationChartInstance = new Chart(ctx, {
+                type: "line",
+                data: {
+                    labels: ["Day 0 (Baseline)", "Day 10", "Day 20", "Day 30 (Projected)"],
+                    datasets: [{
+                        label: `${marker} 30-Day Trajectory`,
+                        data: [base, day10, day20, finalVal],
+                        borderColor: "#00f2fe",
+                        backgroundColor: "rgba(0, 242, 254, 0.1)",
+                        fill: true,
+                        tension: 0.35,
+                        borderWidth: 2,
+                        pointBackgroundColor: "#00f2fe",
+                        pointRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: "rgba(255,255,255,0.05)" }, ticks: { color: "#94a3b8", font: { size: 10 } } },
+                        y: { grid: { color: "rgba(255,255,255,0.05)" }, ticks: { color: "#94a3b8", font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        // Upload Form OCR Listener
         document.getElementById('uploadForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const fileInput = document.getElementById('reportFile');
@@ -432,24 +777,48 @@
 
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
-            statusDiv.innerText = "Processing through universal parser...";
+            statusDiv.innerText = "⏳ Uploading and processing OCR extraction via Gemini...";
+
+            const headers = {};
+            if (token) headers['Authorization'] = `Bearer ${token}`;
 
             try {
-                const response = await fetch('/api/ocr/upload', { method: 'POST', body: formData });
-                const result = await response.json();
-                statusDiv.innerText = `Successfully parsed: ${result.filename || fileInput.files[0].name}`;
+                let response = await fetch('/api/records/upload-report', {
+                    method: 'POST',
+                    headers: headers,
+                    body: formData
+                });
                 
-                // Update Metadata safely from parser or session
-                if (result.patient_name) {
-                    document.getElementById('metaPatientName').innerText = result.patient_name;
+                if (!response.ok) {
+                    response = await fetch('/api/ocr/upload', {
+                        method: 'POST',
+                        headers: headers,
+                        body: formData
+                    });
                 }
-                document.getElementById('metaHospital').innerText = result.hospital_name || 'Apex Diagnostic Centre';
-                document.getElementById('metaDate').innerText = result.report_date || '21/09/2026';
-                
-                const parameters = result.parsed_data || result.parameters || result.data || [];
-                renderParameters(parameters);
+
+                const result = await response.json();
+
+                if (response.ok && (result.success !== false)) {
+                    statusDiv.innerHTML = `✅ Report successfully ingested and parsed!`;
+                    
+                    if (result.patient_name) document.getElementById('metaPatientName').innerText = result.patient_name;
+                    if (result.hospital_name || (result.metadata && result.metadata.hospital_name)) {
+                        document.getElementById('metaHospital').innerText = result.hospital_name || result.metadata.hospital_name;
+                    }
+                    if (result.report_date || (result.metadata && result.metadata.report_date)) {
+                        activeReportDate = result.report_date || result.metadata.report_date;
+                        document.getElementById('metaDate').innerText = activeReportDate;
+                    }
+
+                    const parameters = result.extracted_biomarkers || result.parsed_data || result.parameters || result.data || [];
+                    renderParameters(parameters);
+                } else {
+                    statusDiv.innerHTML = `⚠️ ${result.message || 'Processing completed with warnings.'}`;
+                }
             } catch (err) {
-                statusDiv.innerHTML = '<span style="color: var(--danger);">Error parsing file. Check backend server logs.</span>';
+                console.error(err);
+                statusDiv.innerHTML = '<span style="color: var(--danger);">❌ Error connecting to server during report upload.</span>';
             }
         });
 
@@ -457,12 +826,22 @@
             const container = document.getElementById('paramListContainer');
             container.innerHTML = '';
 
-            if (!parameters || parameters.length === 0) {
+            let paramArray = parameters;
+            if (!Array.isArray(parameters) && typeof parameters === 'object' && parameters !== null) {
+                paramArray = Object.entries(parameters).map(([key, valObj]) => {
+                    if (typeof valObj === 'object' && valObj !== null) {
+                        return { biomarker: key, value: valObj.value, unit: valObj.unit, explanation: valObj.explanation, history: valObj.history, history_dates: valObj.history_dates };
+                    }
+                    return { biomarker: key, value: valObj, unit: '' };
+                });
+            }
+
+            if (!paramArray || paramArray.length === 0) {
                 container.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem;">No clinical parameters detected in payload.</p>';
                 return;
             }
 
-            parameters.forEach((param) => {
+            paramArray.forEach((param) => {
                 const card = document.createElement('div');
                 card.className = "param-card";
                 card.innerHTML = `
@@ -473,38 +852,65 @@
                 container.appendChild(card);
             });
 
-            // Auto-select first parameter
-            selectBiomarker(parameters[0]);
+            selectBiomarker(paramArray[0]);
         }
 
-        function selectBiomarker(param) {
-            document.getElementById('selectedTitle').innerText = param.biomarker || param.name || 'Biomarker Intelligence';
+        async function selectBiomarker(param) {
+            const titleEl = document.getElementById('selectedTitle');
+            const expEl = document.getElementById('selectedExplanation');
             
-            // Segment 2: Easy-language explanation & reference range
-            const explanationText = param.explanation || `Measures the concentration of ${param.biomarker || 'this parameter'} in your blood stream. Optimal levels are essential for cellular oxygenation and metabolic homeostasis.`;
-            document.getElementById('selectedExplanation').innerHTML = `
-                <strong style="color: var(--primary);">Clinical Significance:</strong> ${explanationText}<br><br>
-                <strong style="color: var(--accent);">Recorded Value:</strong> ${param.value} ${param.unit || ''} 
-                <span style="float: right; color: var(--text-muted);">Status: <span style="color: var(--accent);">Normal Range</span></span>
-            `;
+            const biomarkerName = param.biomarker || param.name || 'Biomarker';
+            const biomarkerValue = param.value || '';
+            const biomarkerUnit = param.unit || '';
 
-            // Segment 3: Temporal trend graph over time
-            const ctx = document.getElementById('trendChart').getContext('2d');
-            if (trendChartInstance) {
-                trendChartInstance.destroy();
+            titleEl.innerText = biomarkerName;
+            
+            // If explanation is present in OCR payload, use it instantly. Otherwise fetch dynamically via API.
+            if (param.explanation && param.explanation.length > 5) {
+                expEl.innerHTML = `
+                    <strong style="color: var(--primary);">Clinical Significance:</strong> ${param.explanation}<br><br>
+                    <strong style="color: var(--accent);">Recorded Value:</strong> ${biomarkerValue} ${biomarkerUnit} 
+                    <span style="float: right; color: var(--text-muted);">Status: <span style="color: var(--accent);">Normal Range</span></span>
+                `;
+            } else {
+                expEl.innerHTML = `<span style="color: var(--primary);">⏳ Generating dynamic Gemini clinical explanation...</span>`;
+                try {
+                    const res = await fetch('/api/clinical/explain', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ biomarker: biomarkerName, value: biomarkerValue, unit: biomarkerUnit })
+                    });
+                    const data = await res.json();
+                    expEl.innerHTML = `
+                        <strong style="color: var(--primary);">Clinical Significance:</strong> ${data.explanation || 'Detailed cellular analysis completed.'}<br><br>
+                        <strong style="color: var(--accent);">Recorded Value:</strong> ${biomarkerValue} ${biomarkerUnit} 
+                        <span style="float: right; color: var(--text-muted);">Status: <span style="color: var(--accent);">Evaluated</span></span>
+                    `;
+                } catch(e) {
+                    expEl.innerHTML = `
+                        <strong style="color: var(--primary);">Clinical Significance:</strong> Measures the physiological concentration of ${biomarkerName}.<br><br>
+                        <strong style="color: var(--accent);">Recorded Value:</strong> ${biomarkerValue} ${biomarkerUnit}
+                    `;
+                }
             }
 
-            const historyValues = (param.history && param.history.length > 0) ? param.history : [Number(param.value) * 0.95, Number(param.value) * 0.98, Number(param.value)];
+            // Render Trend Graph using actual report dates
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            if (trendChartInstance) trendChartInstance.destroy();
+
+            const historyValues = (param.history && param.history.length > 0) ? param.history : [Number(biomarkerValue) * 0.95 || 10, Number(biomarkerValue) * 0.98 || 12, Number(biomarkerValue) || 15];
+            
+            // Use extracted report dates if available, falling back to active dynamic report date
             const historyDates = (param.history_dates && param.history_dates.length === historyValues.length) 
                 ? param.history_dates 
-                : ['15/07/2026', '10/08/2026', '21/09/2026'];
+                : [activeReportDate, activeReportDate, activeReportDate];
 
             trendChartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: historyDates,
                     datasets: [{
-                        label: param.biomarker || 'Value',
+                        label: biomarkerName,
                         data: historyValues,
                         borderColor: '#00f2fe',
                         backgroundColor: 'rgba(0, 242, 254, 0.1)',
@@ -536,25 +942,65 @@
             messages.innerHTML += `<div style="margin-bottom: 14px; text-align: right;"><strong>You:</strong> ${userText}</div>`;
             input.value = '';
 
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
             try {
                 const res = await fetch('/api/gemini-chat', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: headers,
                     body: JSON.stringify({ message: userText })
                 });
                 const data = await res.json();
-                messages.innerHTML += `<div style="margin-bottom: 14px; color: var(--primary);"><strong>Gemini AI:</strong> ${data.response}</div>`;
+                messages.innerHTML += `<div style="margin-bottom: 14px; color: var(--primary);"><strong>Gemini AI:</strong> ${data.response || data.message || 'Processed successfully.'}</div>`;
                 messages.scrollTop = messages.scrollHeight;
             } catch(e) {
                 messages.innerHTML += `<div style="margin-bottom: 14px; color: var(--danger);"><strong>Error:</strong> Failed to reach Gemini API endpoint.</div>`;
             }
         }
 
-        function runPathologySynthesis() {
+        async function runPathologySynthesis() {
+            const fileInput = document.getElementById('scanFile');
+            const focusSelect = document.getElementById('scanFocus').value;
             const resArea = document.getElementById('synthResult');
             const resText = document.getElementById('synthText');
+
+            if (!fileInput.files[0]) {
+                alert("Please upload a medical scan or pathology image first.");
+                return;
+            }
+
             resArea.style.display = 'block';
-            resText.innerHTML = "Multi-modal cross-analysis complete: No acute structural abnormalities detected. Biomarker correlation aligns with normal metabolic variance.";
+            resText.innerHTML = "⏳ Uploading scan and running Gemini multi-modal synthesis...";
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('clinical_focus', focusSelect);
+
+            const headers = {};
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            try {
+                const response = await fetch('/api/pathology/synthesize', {
+                    method: 'POST',
+                    headers: headers,
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    resText.innerHTML = `
+                        <strong style="color: var(--accent);">Analysis Complete:</strong><br>
+                        ${result.synthesis_report || result.analysis || result.message || 'Multi-modal synthesis processed successfully.'}
+                    `;
+                } else {
+                    resText.innerHTML = `<span style="color: var(--danger);">⚠️ ${result.detail || result.message || 'Error processing synthesis.'}</span>`;
+                }
+            } catch (err) {
+                console.error(err);
+                resText.innerHTML = '<span style="color: var(--danger);">❌ Connection error while communicating with Gemini multi-modal engine.</span>';
+            }
         }
 
         function searchSpecialists() {

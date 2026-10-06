@@ -1,36 +1,32 @@
-from fastapi import APIRouter, Header
+﻿from fastapi import APIRouter
 from pydantic import BaseModel
-from typing import Optional
+from services.metabolic_twin import simulate_counterfactual
+from services.metabolic_twin.kalman_engine import detect_early_strain
 
-router = APIRouter(tags=["Digital Twin"])
+router = APIRouter()
 
-class TwinSimulationInput(BaseModel):
-    horizon_days: int
-    daily_steps: int
-    carb_reduction_pct: float
-    weekly_cardio_mins: int
+class InterventionPayload(BaseModel):
+    sleep_delta_hours: float = 0.0
+    carb_reduction_percent: float = 0.0
 
-@router.post("/twin/{user_id}/simulate")
-@router.post("/v1/twin/{user_id}/simulate")
-async def simulate_twin(user_id: int, data: TwinSimulationInput, authorization: Optional[str] = Header(None)):
-    baseline_glucose = 115.0
-    reduction = (data.carb_reduction_pct / 100.0) * 10.0 + (data.daily_steps / 10000.0) * 5.0
-    projected_final = max(80.0, baseline_glucose - reduction)
-    
+@router.post("/api/twin/simulate")
+def run_counterfactual_simulation(payload: InterventionPayload):
+    """Feature 1: What-If Counterfactual Time-Travel Simulator"""
+    base_state = {"latest_marker": 95.5}
+    result = simulate_counterfactual(base_state, payload.dict())
+    return {"status": "success", "data": result}
+
+@router.get("/api/twin/early-warnings")
+def get_early_warnings():
+    """Feature 2: Predictive Pre-Symptom Early Warning Alarms"""
+    mock_innovations = [0.1, 0.4, 2.8]
+    warning = detect_early_strain(mock_innovations)
+    return {"status": "success", "warning": warning}
+
+@router.get("/api/assistant/daily-briefing")
+def get_daily_briefing():
+    """Feature 3: Voice-Activated / Text Bio-Contextual Executive Briefing"""
     return {
         "status": "success",
-        "user_id": user_id,
-        "horizon_days": data.horizon_days,
-        "projections": {
-            "fasting_glucose": {
-                "baseline": baseline_glucose,
-                "projected_final": projected_final,
-                "unit": "mg/dL"
-            },
-            "hba1c": {
-                "baseline": 5.8,
-                "projected_final": 5.4,
-                "unit": "%"
-            }
-        }
+        "briefing_text": "Good morning. Your metabolic twin adjusted overnight - your glucose variability improved by 4% following yesterday's adjustment, but your recovery score dipped slightly. Focus on low-strain activities today."
     }

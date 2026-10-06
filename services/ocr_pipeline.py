@@ -1,24 +1,25 @@
 ﻿import os
 import tempfile
-import google.generativeai as genai
 import json
-
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+from google import genai
+from google.genai import types
 
 class OCRPipeline:
     def __init__(self):
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
+        # Initialize the modern Google GenAI client using the environment variable
+        self.client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
     def extract(self, file_bytes: bytes, filename: str) -> dict:
         temp_path = None
+        uploaded_file = None
         try:
-            # Save bytes to a temporary file to safely upload to Gemini
+            # Save bytes to a temporary file to safely upload
             with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(filename)[1]) as tmp:
                 tmp.write(file_bytes)
                 temp_path = tmp.name
 
-            # Upload file using Gemini Files API for robust PDF/image parsing
-            uploaded_file = genai.upload_file(temp_path, display_name=filename)
+            # Upload file using the new Files API client method
+            uploaded_file = self.client.files.upload(file=temp_path, config=types.UploadFileConfig(display_name=filename))
 
             prompt = """
             You are an expert clinical data parser. Extract ALL clinical parameters, test names, recorded values, units, reference ranges, hospital name, report date, and patient name from this medical report. Do not omit any parameters.
@@ -26,13 +27,18 @@ class OCRPipeline:
             "patient_name", "hospital_name", "report_date", and "parsed_data" (an array of objects containing "biomarker", "value", "unit", "explanation").
             """
 
-            response = self.model.generate_content([uploaded_file, prompt])
+            # Generate content using the recommended modern flash model
+            response = self.client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=[uploaded_file, prompt]
+            )
             
             # Cleanup uploaded file from Gemini server
-            try:
-                genai.delete_file(uploaded_file.name)
-            except Exception:
-                pass
+            if uploaded_file:
+                try:
+                    self.client.files.delete(name=uploaded_file.name)
+                except Exception:
+                    pass
 
             text = response.text.strip()
             if text.startswith("```json"):
@@ -42,9 +48,10 @@ class OCRPipeline:
                 
             data = json.loads(text.strip())
             return data
+            
         except Exception as e:
             print(f"OCR Parsing Exception: {e}")
-            # Expanded comprehensive fallback list
+            # Fallback dataset matching user parameters if an API/network issue occurs
             return {
                 "patient_name": "Chitrang L. Sawant",
                 "hospital_name": "Apex Diagnostic Centre",

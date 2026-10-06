@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, UploadFile, File, HTTPException, status, Depends
+﻿from fastapi import APIRouter, UploadFile, File, HTTPException, status, Depends, Header
 from fastapi.responses import JSONResponse, FileResponse
 import pdfplumber
 import pytesseract
@@ -10,9 +10,30 @@ import platform
 import os
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
+import jwt
 
 router = APIRouter(prefix="/api/records", tags=["Medical Records"])
 executor = ThreadPoolExecutor(max_workers=8)
+
+SECRET_KEY = "helix_super_secret_enterprise_key"
+ALGORITHM = "HS256"
+
+# In-memory user history store mapping user email -> list of uploaded reports
+# In production, this maps to your SQLAlchemy database tables
+user_records_db = {}
+
+def get_current_user_email(authorization: str = Header(None)) -> str:
+    """Extracts user email from JWT token in Authorization header."""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid authentication token.")
+    
+    token = authorization.split(" ")[1]
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload.get("sub")
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired authentication token.")
 
 if platform.system() == "Windows":
     possible_paths = [
@@ -59,7 +80,7 @@ def fast_ocr_extraction(file_bytes: bytes, filename: str) -> str:
     return raw_text
 
 def extract_metadata_from_header(raw_text: str) -> dict:
-    meta = {"report_date": "Recent", "hospital_name": "General Diagnostic Facility"}
+    meta = {"report_date": datetime.now().strftime("%Y-%m-%d"), "hospital_name": "General Diagnostic Facility"}
     
     date_match = re.search(r'(?:date|collected|reported|specimen\s+date)[\s\:\-\=]+(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2})', raw_text, re.IGNORECASE)
     if date_match:
@@ -102,28 +123,18 @@ def parse_report_parameters(raw_text: str) -> dict:
 async def serve_history_page():
     return FileResponse("public/history.html")
 
-@router.get("/history/{user_id}")
-async def get_patient_history(user_id: int):
-    # For prototype demonstration, we return simulated chronological history items
-    # In production, this queries DiagnosisHistory table from SQLAlchemy
-    sample_history = [
-        {
-            "diagnosis_title": "Comprehensive Metabolic & Blood Panel",
-            "description": "Ingested 32 clinical parameters including Hemoglobin, Bilirubin, and Lipid profile.",
-            "hospital_name": "Thyrocare & Diagnostics",
-            "diagnosis_date": "2026-09-29"
-        },
-        {
-            "diagnosis_title": "Routine Wellness & Vitals Check",
-            "description": "Evaluated baseline glycemic markers and cardiovascular risk ratios.",
-            "hospital_name": "Apollo Hospitals",
-            "diagnosis_date": "2026-06-15"
-        }
-    ]
-    return {"success": True, "history": sample_history}
+@router.get("/history/me")
+async def get_my_patient_history(authorization: str = Header(None)):
+    """Fetches real longitudinal history for the currently authenticated user."""
+    user_email = get_current_user_email(authorization)
+    history = user_records_db.get(user_email, [])
+    return {"success": True, "total_records": len(history), "history": history}
 
 @router.post("/upload-report")
-async def process_lab_report(file: UploadFile = File(...)):
+async def process_lab_report(file: UploadFile = File(...), authorization: str = Header(None)):
+    # 1. Authenticate user from JWT token
+    user_email = get_current_user_email(authorization)
+
     contents = await file.read()
     if not contents:
         raise HTTPException(status_code=400, detail="Uploaded file is empty.")
@@ -146,9 +157,23 @@ async def process_lab_report(file: UploadFile = File(...)):
             }
         )
 
+    # 2. Package record for longitudinal tracking
+    new_record = {
+        "diagnosis_title": f"Lab Report: {file.filename}",
+        "description": f"Extracted {len(extracted_biomarkers)} clinical parameters.",
+        "hospital_name": metadata.get("hospital_name", "General Diagnostic Facility"),
+        "diagnosis_date": metadata.get("report_date"),
+        "biomarkers": extracted_biomarkers
+    }
+
+    # 3. Store record under the authenticated user's profile
+    if user_email not in user_records_db:
+        user_records_db[user_email] = []
+    user_records_db[user_email].append(new_record)
+
     return {
         "success": True,
-        "message": f"Successfully ingested {len(extracted_biomarkers)} parameters.",
+        "message": f"Successfully ingested {len(extracted_biomarkers)} parameters for longitudinal tracking.",
         "filename": file.filename,
         "metadata": metadata,
         "extracted_biomarkers": extracted_biomarkers

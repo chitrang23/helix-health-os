@@ -15,6 +15,13 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    # Relationships
+    lab_reports = relationship("LabReport", back_populates="user", cascade="all, delete-orphan")
+    chat_logs = relationship("ChatLog", back_populates="user", cascade="all, delete-orphan")
+    health_records = relationship("HealthRecord", back_populates="user", cascade="all, delete-orphan")
+    stress_logs = relationship("StressLog", back_populates="user", cascade="all, delete-orphan")
+
+
 class LabReport(Base):
     __tablename__ = "lab_reports"
 
@@ -25,6 +32,9 @@ class LabReport(Base):
     report_date = Column(String(50), nullable=True)
     extracted_data = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="lab_reports")
+
 
 class BiomarkerRegistryModel(Base):
     __tablename__ = "biomarker_registry"
@@ -43,11 +53,11 @@ class BiomarkerRegistryModel(Base):
     patterns = Column(JSON, nullable=True)
 
     def __init__(self, **kwargs):
-        # Dynamically set valid columns and ignore unexpected keyword arguments safely
         cls_cols = {col.key for col in self.__table__.columns}
         for key, val in kwargs.items():
             if key in cls_cols:
                 setattr(self, key, val)
+
 
 class DrugRuleModel(Base):
     __tablename__ = "drug_rules"
@@ -88,8 +98,35 @@ class HealthRecord(Base):
     __tablename__ = "health_records"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, index=True, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     biomarker_name = Column(String, nullable=False, index=True)
     value = Column(Float, nullable=False)
     unit = Column(String, nullable=True)
     recorded_at = Column(DateTime, nullable=True)
+
+    user = relationship("User", back_populates="health_records")
+
+
+class ChatLog(Base):
+    __tablename__ = "chat_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    query = Column(Text, nullable=False)
+    response = Column(Text, nullable=False)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="chat_logs")
+
+
+class StressLog(Base):
+    __tablename__ = "stress_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    stress_score = Column(Integer, nullable=False)  # Scale 1-10
+    perceived_triggers = Column(String(255), nullable=True)
+    notes = Column(Text, nullable=True)
+    logged_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="stress_logs")

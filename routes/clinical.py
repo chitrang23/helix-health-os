@@ -7,7 +7,8 @@ import json
 from google import genai
 from google.genai import types
 
-router = APIRouter(prefix="/api/clinical", tags=["Clinical Intelligence"])
+# Prefix is handled centrally in main.py to prevent double-prefixing (404 errors)
+router = APIRouter(tags=["Clinical Intelligence"])
 
 @router.get("/safety-page")
 async def serve_safety_page():

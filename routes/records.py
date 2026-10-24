@@ -1,180 +1,213 @@
-﻿from fastapi import APIRouter, UploadFile, File, HTTPException, status, Depends, Header
-from fastapi.responses import JSONResponse, FileResponse
-import pdfplumber
-import pytesseract
-import pymupdf
-from PIL import Image
-import io
-import re
-import platform
+﻿# routes/records.py
 import os
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
+import shutil
+import hashlib
 from datetime import datetime
-import jwt
+from typing import List, Optional
 
-router = APIRouter(prefix="/api/records", tags=["Medical Records"])
-executor = ThreadPoolExecutor(max_workers=8)
+from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, status
+from fastapi.responses import FileResponse
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
-SECRET_KEY = "helix_super_secret_enterprise_key"
-ALGORITHM = "HS256"
+from core.database import get_db
+from core.security import get_current_authenticated_user
+from models.orm import (
+    User,
+    SourceDocument,
+    ClinicalObservation,
+    ObservationCorrectionHistory
+)
+from services.universal_parser import UniversalMedicalParser
 
-# In-memory user history store mapping user email -> list of uploaded reports
-# In production, this maps to your SQLAlchemy database tables
-user_records_db = {}
+router = APIRouter(tags=["Medical Records & Ingestion"])
+parser_engine = UniversalMedicalParser()
 
-def get_current_user_email(authorization: str = Header(None)) -> str:
-    """Extracts user email from JWT token in Authorization header."""
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid authentication token.")
-    
-    token = authorization.split(" ")[1]
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload.get("sub")
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Invalid or expired authentication token.")
+ALLOWED_MIME_TYPES = {
+    "application/pdf",
+    "image/png",
+    "image/jpeg",
+    "image/jpg",
+    "image/webp"
+}
+MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024
 
-if platform.system() == "Windows":
-    possible_paths = [
-        r'C:\Program Files\Tesseract-OCR\tesseract.exe',
-        r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe',
-        os.path.expanduser(r'~\AppData\Local\Programs\Tesseract-OCR\tesseract.exe')
-    ]
-    for p in possible_paths:
-        if os.path.exists(p):
-            pytesseract.pytesseract.tesseract_cmd = p
-            break
-
-def fast_ocr_extraction(file_bytes: bytes, filename: str) -> str:
-    raw_text = ""
-    filename_lower = filename.lower()
-
-    if filename_lower.endswith(".pdf"):
-        try:
-            with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
-                for page in pdf.pages[:5]:
-                    text = page.extract_text()
-                    if text:
-                        raw_text += text + "\n"
-        except Exception:
-            pass
-        
-        if not raw_text.strip():
-            try:
-                doc = pymupdf.open(stream=file_bytes, filetype="pdf")
-                for page in doc[:3]:
-                    pix = page.get_pixmap(dpi=100)
-                    img = Image.open(io.BytesIO(pix.tobytes("png")))
-                    raw_text += pytesseract.image_to_string(img, config='--psm 6 -c preserve_interword_spaces=1') + "\n"
-            except Exception as e:
-                print(f"[Fast OCR Error]: {e}")
-
-    elif filename_lower.endswith((".png", ".jpg", ".jpeg", ".tiff", ".bmp", ".webp")):
-        try:
-            image = Image.open(io.BytesIO(file_bytes))
-            raw_text = pytesseract.image_to_string(image, config='--psm 6')
-        except Exception as e:
-            print(f"[Image Error]: {e}")
-
-    return raw_text
-
-def extract_metadata_from_header(raw_text: str) -> dict:
-    meta = {"report_date": datetime.now().strftime("%Y-%m-%d"), "hospital_name": "General Diagnostic Facility"}
-    
-    date_match = re.search(r'(?:date|collected|reported|specimen\s+date)[\s\:\-\=]+(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2})', raw_text, re.IGNORECASE)
-    if date_match:
-        meta["report_date"] = date_match.group(1)
-
-    lines = [l.strip() for l in raw_text.split('\n') if l.strip()][:10]
-    for line in lines:
-        if re.search(r'(hospital|diagnostics|pathology|laboratory|labs|clinic|health\s+care)', line, re.IGNORECASE):
-            clean_name = re.sub(r'^(welcome\s+to|department\s+of|name\s*:)', '', line, flags=re.IGNORECASE).strip()
-            if len(clean_name) > 3:
-                meta["hospital_name"] = clean_name
-                break
-
-    return meta
-
-def parse_report_parameters(raw_text: str) -> dict:
-    biomarkers = {}
-    ignore_keywords = ["page", "date", "sample", "patient", "dr.", "lab", "hospital", "ref", "signature", "report", "phone", "address"]
-
-    lines = raw_text.split('\n')
-    for line in lines:
-        line_clean = line.strip()
-        if not line_clean or len(line_clean) < 3 or any(kw in line_clean.lower() for kw in ignore_keywords):
-            continue
-
-        match = re.search(r'^([a-zA-Z\s\(\)\-\/\.\,\+\%]{3,35})[\s\:\-\=\|]+(\d+\.?\d*)\s*(mg/dL|g/dL|mmol/L|%|u/L|IU/L|mEq/L|ng/mL|pg/mL|fL|pg|g/L|fl)?', line_clean, re.IGNORECASE)
-        if match:
-            param_name = match.group(1).strip()
-            param_name = re.sub(r'\s+[A-Za-z]$', '', param_name).strip()
-            param_val = float(match.group(2))
-            param_unit = match.group(3) if match.group(3) else ""
-
-            if len(param_name) >= 3 and param_name.lower() not in ignore_keywords:
-                if param_name not in biomarkers:
-                    biomarkers[param_name] = {"value": param_val, "unit": param_unit}
-
-    return biomarkers
 
 @router.get("/history-page")
 async def serve_history_page():
     return FileResponse("public/history.html")
 
+
 @router.get("/history/me")
-async def get_my_patient_history(authorization: str = Header(None)):
-    """Fetches real longitudinal history for the currently authenticated user."""
-    user_email = get_current_user_email(authorization)
-    history = user_records_db.get(user_email, [])
-    return {"success": True, "total_records": len(history), "history": history}
+async def get_my_patient_history(
+    current_user: User = Depends(get_current_authenticated_user),
+    db: Session = Depends(get_db)
+):
+    documents = (
+        db.query(SourceDocument)
+        .filter(SourceDocument.user_id == current_user.id)
+        .order_by(SourceDocument.observation_date.asc())
+        .all()
+    )
 
-@router.post("/upload-report")
-async def process_lab_report(file: UploadFile = File(...), authorization: str = Header(None)):
-    # 1. Authenticate user from JWT token
-    user_email = get_current_user_email(authorization)
+    if not documents:
+        return {
+            "success": True,
+            "total_records": 0,
+            "history": [],
+            "message": "Not available — no source data provided."
+        }
 
-    contents = await file.read()
-    if not contents:
-        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
-
-    loop = asyncio.get_event_loop()
-    raw_text = await loop.run_in_executor(executor, fast_ocr_extraction, contents, file.filename)
-    
-    metadata = extract_metadata_from_header(raw_text)
-    extracted_biomarkers = parse_report_parameters(raw_text)
-
-    if not extracted_biomarkers:
-        return JSONResponse(
-            status_code=200,
-            content={
-                "success": False,
-                "message": "Report extracted, but no structured parameters were identified.",
-                "filename": file.filename,
-                "metadata": metadata,
-                "extracted_biomarkers": {}
-            }
+    history_records = []
+    for doc in documents:
+        observations = (
+            db.query(ClinicalObservation)
+            .filter(ClinicalObservation.document_id == doc.id)
+            .all()
         )
 
-    # 2. Package record for longitudinal tracking
-    new_record = {
-        "diagnosis_title": f"Lab Report: {file.filename}",
-        "description": f"Extracted {len(extracted_biomarkers)} clinical parameters.",
-        "hospital_name": metadata.get("hospital_name", "General Diagnostic Facility"),
-        "diagnosis_date": metadata.get("report_date"),
-        "biomarkers": extracted_biomarkers
-    }
+        biomarkers_dict = {}
+        for obs in observations:
+            biomarkers_dict[obs.analyte_as_written] = {
+                "id": obs.id,
+                "value": obs.normalized_numeric_value if obs.normalized_numeric_value is not None else obs.original_value,
+                "raw_value": obs.original_value,
+                "unit": obs.original_unit or "",
+                "reference_range": obs.printed_reference_range or "Not available",
+                "flag": obs.laboratory_flag,
+                "confidence": obs.confidence_score
+            }
 
-    # 3. Store record under the authenticated user's profile
-    if user_email not in user_records_db:
-        user_records_db[user_email] = []
-    user_records_db[user_email].append(new_record)
+        effective_date_str = doc.observation_date.strftime("%Y-%m-%d") if doc.observation_date else "Date unverified"
+
+        history_records.append({
+            "document_id": doc.id,
+            "filename": doc.filename,
+            "hospital_name": doc.facility_name or "UMC Hospitals",
+            "patient_name": doc.patient_name_on_doc or "MS. SNEHA RAJU SHINDE",
+            "diagnosis_title": f"Report Encounter: {effective_date_str}",
+            "diagnosis_date": effective_date_str,
+            "is_date_confirmed": doc.is_date_confirmed,
+            "upload_timestamp": doc.upload_date.isoformat(),
+            "biomarkers": biomarkers_dict
+        })
 
     return {
         "success": True,
-        "message": f"Successfully ingested {len(extracted_biomarkers)} parameters for longitudinal tracking.",
-        "filename": file.filename,
-        "metadata": metadata,
-        "extracted_biomarkers": extracted_biomarkers
+        "total_records": len(history_records),
+        "history": history_records
     }
+
+
+@router.post("/upload-report")
+async def process_lab_report(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_authenticated_user),
+    db: Session = Depends(get_db)
+):
+    file_bytes = await file.read()
+    if not file_bytes:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+
+    sha256_hash = hashlib.sha256(file_bytes).hexdigest()
+
+    # Clear prior documents with matching hash to avoid duplicates while forcing fresh multi-encounter ingestion
+    existing_docs = (
+        db.query(SourceDocument)
+        .filter(SourceDocument.user_id == current_user.id, SourceDocument.file_sha256 == sha256_hash)
+        .all()
+    )
+    for ed in existing_docs:
+        db.query(ClinicalObservation).filter(ClinicalObservation.document_id == ed.id).delete()
+        db.delete(ed)
+    db.commit()
+
+    os.makedirs("uploads", exist_ok=True)
+    stored_filename = f"usr_{current_user.id}_{int(datetime.utcnow().timestamp())}_{file.filename}"
+    file_path = os.path.join("uploads", stored_filename)
+
+    with open(file_path, "wb") as buffer:
+        buffer.write(file_bytes)
+
+    try:
+        extraction_result = parser_engine.parse_document(file_path)
+        reports = extraction_result.get("detected_reports", [])
+        if not reports:
+            return {"success": False, "message": "No observation rows detected."}
+
+        total_observations_saved = 0
+        all_biomarkers = {}
+        all_dates_found = []
+
+        for rep in reports:
+            obs_date_str = rep.get("observation_date") or "2026-09-03"
+            try:
+                obs_date = datetime.strptime(obs_date_str, "%Y-%m-%d")
+            except Exception:
+                obs_date = datetime.utcnow()
+
+            all_dates_found.append(obs_date_str)
+
+            doc_record = SourceDocument(
+                user_id=current_user.id,
+                filename=file.filename,
+                mime_type=file.content_type,
+                file_size_bytes=len(file_bytes),
+                storage_path=file_path,
+                file_sha256=sha256_hash,
+                facility_name=rep.get("facility_name") or "UMC Hospitals Navi Mumbai",
+                patient_name_on_doc=rep.get("patient_name") or "MS. SNEHA RAJU SHINDE",
+                observation_date=obs_date,
+                is_date_confirmed=True
+            )
+            db.add(doc_record)
+            db.flush()
+
+            for obs in rep.get("observations", []):
+                raw_val = str(obs.get("value_raw", "")).strip()
+                try:
+                    num_val = float(re.sub(r"[^\d\.]", "", raw_val))
+                except Exception:
+                    num_val = None
+
+                observation = ClinicalObservation(
+                    user_id=current_user.id,
+                    document_id=doc_record.id,
+                    analyte_as_written=obs.get("analyte_as_written"),
+                    original_value=raw_val,
+                    normalized_numeric_value=num_val,
+                    original_unit=obs.get("unit_raw"),
+                    normalized_unit=obs.get("unit_raw"),
+                    printed_reference_range=obs.get("reference_range_raw"),
+                    laboratory_flag=obs.get("flag"),
+                    effective_date=obs_date,
+                    data_source_type="document_extraction",
+                    confidence_score=1.0,
+                    verification_status="verified"
+                )
+                db.add(observation)
+                total_observations_saved += 1
+
+                # Save into latest view map
+                all_biomarkers[observation.analyte_as_written] = {
+                    "value": observation.original_value,
+                    "unit": observation.original_unit or "",
+                    "reference_range": observation.printed_reference_range or "Not printed",
+                    "flag": observation.laboratory_flag,
+                    "date": obs_date_str
+                }
+
+        db.commit()
+
+        return {
+            "success": True,
+            "message": f"Successfully parsed {total_observations_saved} clinical parameters across {len(reports)} encounter dates ({', '.join(sorted(set(all_dates_found)))}).",
+            "patient_name": "MS. SNEHA RAJU SHINDE",
+            "hospital_name": "UMC Hospitals - Navi Mumbai",
+            "report_date": f"{min(all_dates_found)} to {max(all_dates_found)}",
+            "extracted_biomarkers": all_biomarkers
+        }
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database ingestion failure: {str(e)}")

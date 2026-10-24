@@ -2,155 +2,211 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Helix Health OS - Patient Timeline & Medical History</title>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <title>Helix Health OS - Enterprise Health Memory & Timeline</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/styles.css">
   <style>
+    :root {
+      --bg-deep: #05080f;
+      --surface: #0d1322;
+      --surface-glass: rgba(13, 19, 34, 0.88);
+      --primary: #00f2fe;
+      --secondary: #4facfe;
+      --accent: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: rgba(255, 255, 255, 0.08);
+      --shadow: 0 25px 50px rgba(0, 0, 0, 0.6);
+    }
     body {
-      background: radial-gradient(circle at 50% 20%, #0f172a, #020617);
-      color: #f8fafc;
+      background-color: var(--bg-deep);
+      color: var(--text-main);
       font-family: 'Plus Jakarta Sans', sans-serif;
       min-height: 100vh;
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(0, 242, 254, 0.06) 0%, transparent 45%),
+        radial-gradient(circle at 85% 85%, rgba(79, 172, 254, 0.06) 0%, transparent 45%);
+      margin: 0; padding: 0;
     }
-    .timeline-container {
-      position: relative;
-      max-width: 800px;
-      margin: 2rem auto;
-      padding: 0 1rem;
+    nav.app-navbar {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 18px 35px; background: var(--surface-glass); backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 1000;
     }
+    .brand {
+      font-size: 1.2rem; font-weight: 700; letter-spacing: 1.2px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .nav-links { display: flex; gap: 4px; list-style: none; }
+    .nav-links a {
+      color: var(--text-muted); text-decoration: none; font-weight: 500; font-size: 0.75rem;
+      padding: 8px 12px; border-radius: 8px; transition: all 0.3s;
+    }
+    .nav-links a:hover, .nav-links a.active { color: var(--text-main); background: rgba(255,255,255,0.06); border: 1px solid var(--border); }
+    
+    .container { max-width: 1100px; margin: 40px auto; padding: 0 25px; }
+    
+    .profile-banner {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 18px;
+      padding: 30px; margin-bottom: 35px; box-shadow: var(--shadow);
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;
+    }
+    .stat-pill {
+      background: rgba(0, 242, 254, 0.08); border: 1px solid rgba(0, 242, 254, 0.2);
+      padding: 8px 16px; border-radius: 12px; font-size: 0.8rem; color: var(--primary); font-weight: 600;
+    }
+
+    .search-bar {
+      width: 100%; padding: 14px 20px; background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+      border-radius: 12px; color: #fff; font-size: 0.9rem; margin-bottom: 30px; outline: none; transition: border-color 0.3s;
+    }
+    .search-bar:focus { border-color: var(--primary); }
+
+    .timeline-container { position: relative; padding-left: 40px; }
     .timeline-container::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      left: 30px;
-      width: 3px;
-      background: rgba(14, 165, 233, 0.3);
+      content: ''; position: absolute; top: 0; bottom: 0; left: 15px; width: 3px;
+      background: linear-gradient(to bottom, var(--primary), var(--secondary), rgba(0,242,254,0.1));
     }
-    .timeline-item {
-      position: relative;
-      margin-bottom: 2rem;
-      padding-left: 60px;
-    }
+    .timeline-item { position: relative; margin-bottom: 35px; }
     .timeline-dot {
-      position: absolute;
-      left: 22px;
-      top: 4px;
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      background: #0ea5e9;
-      border: 3px solid #0f172a;
-      box-shadow: 0 0 10px #0ea5e9;
+      position: absolute; left: -31px; top: 22px; width: 16px; height: 16px; border-radius: 50%;
+      background: var(--primary); border: 3px solid var(--bg-deep); box-shadow: 0 0 15px var(--primary);
     }
     .timeline-card {
-      background: rgba(15, 23, 42, 0.7);
-      backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 14px;
-      padding: 1.25rem;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+      padding: 24px; box-shadow: var(--shadow); transition: transform 0.3s ease, border-color 0.3s;
+    }
+    .timeline-card:hover { transform: translateY(-3px); border-color: rgba(0, 242, 254, 0.3); }
+    
+    .biomarker-badge {
+      display: inline-block; background: rgba(0, 242, 254, 0.08); border: 1px solid rgba(0, 242, 254, 0.2);
+      color: var(--primary); padding: 5px 10px; border-radius: 8px; font-size: 0.75rem; font-family: 'JetBrains Mono', monospace;
+      margin: 4px 6px 4px 0; font-weight: 600;
     }
   </style>
 </head>
 <body>
-    <!-- Unified Navbar -->
-    <nav class="border-b border-slate-800 bg-slate-900/90 backdrop-blur px-6 py-4 flex justify-between items-center sticky top-0 z-50">
-        <div class="flex items-center space-x-3">
-            <div class="h-3 w-3 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_#10b981]"></div>
-            <span class="font-bold text-lg tracking-wider text-emerald-400">HELIX // ENTERPRISE OS</span>
-        </div>
-        <div class="space-x-4 text-xs font-medium text-slate-300 flex items-center">
-            <a href="/dashboard.html" class="hover:text-emerald-400 transition">Dashboard</a>
-            <a href="/history.html" class="hover:text-emerald-400 transition">Medical History</a>
-            <a href="/safety.html" class="hover:text-emerald-400 transition">Drug Safety</a>
-            <a href="/chat.html" class="hover:text-emerald-400 transition">Assistant</a>
-            <a href="/prediction.html" class="hover:text-emerald-400 transition">30-Day</a>
-            <a href="/stress.html" class="hover:text-emerald-400 transition">Stress & Flow</a>
-            <a href="/soap.html" class="hover:text-emerald-400 transition">SOAP & Billing</a>
-            <a href="/register.html" class="hover:text-emerald-400 transition">Register</a>
-            <a href="#" onclick="logout()" class="bg-rose-600/20 text-rose-400 border border-rose-500/30 px-3 py-1 rounded-lg hover:bg-rose-600/30 transition font-bold">Sign Out</a>
-        </div>
-    </nav>
-    <!-- Unified Navbar -->
 
-  <main style="max-width: 900px; margin: 2rem auto; padding: 0 1rem;">
-    <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 1.5rem; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
+    <nav class="app-navbar">
+        <div class="brand">⚡ HELIX // ENTERPRISE OS</div>
+        <ul class="nav-links">
+            <li><a href="/dashboard.html">Dashboard & OCR</a></li>
+            <li><a href="/history.html" class="active">Patient History</a></li>
+            <li><a href="/dashboard.html#stress">🧘 Stress & Mindfulness</a></li>
+            <li><a href="/dashboard.html#chatbot">Gemini Clinical Chat</a></li>
+            <li><a href="/dashboard.html#simulation">30-Day Twin</a></li>
+        </ul>
+        <div class="stat-pill">🔒 Secure EHR Vault</div>
+    </nav>
+
+  <div class="container">
+    <div class="profile-banner">
       <div>
-        <h2 id="patient-name" style="font-size: 1.3rem; color: #fff; margin-bottom: 0.3rem;">Loading Patient Details...</h2>
-        <p id="patient-meta" style="font-size: 0.85rem; color: #94a3b8; margin: 0;"></p>
+        <h1 id="patient-name" style="font-size: 1.5rem; color: #fff; margin-bottom: 6px;">Loading Patient Profile...</h1>
+        <p id="patient-meta" style="font-size: 0.85rem; color: var(--text-muted); margin: 0;"></p>
       </div>
-      <span style="background: rgba(14, 165, 233, 0.2); color: #38bdf8; padding: 0.4rem 0.9rem; border-radius: 8px; font-weight: 700; font-size: 0.8rem;">Complete Health Timeline</span>
+      <div style="display: flex; gap: 10px;">
+        <div class="stat-pill" id="totalRecordsBadge">Total Reports: 0</div>
+      </div>
     </div>
 
-    <h3 style="font-size: 1.1rem; color: #fff; margin-bottom: 1.5rem;">📅 Chronological Diagnosis & Visit History</h3>
+    <input type="text" id="searchInput" class="search-bar" placeholder="🔍 Search history by hospital, biomarker, or diagnosis..." oninput="filterTimeline()">
+
+    <h3 style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--primary); margin-bottom: 25px;">// Chronological Health Memory Timeline</h3>
     
     <div id="timeline-list" class="timeline-container">
-      <p style="color: #94a3b8; text-align: center; padding: 2rem;">Loading medical history timeline...</p>
+      <div style="text-align: center; padding: 4rem; color: var(--text-muted);">
+        <p style="font-size: 1.5rem; margin-bottom: 0.5rem;">⏳</p>
+        <p>Loading longitudinal health history records...</p>
+      </div>
     </div>
-  </main>
+  </div>
 
   <script>
     const token = localStorage.getItem("helix_token");
     const userRaw = localStorage.getItem("helix_user");
-    if (!token || !userRaw) { window.location.href = "/"; }
+    if (!token) { window.location.href = "/"; }
 
-    const user = JSON.parse(userRaw);
-    document.getElementById("patient-name").innerText = user.full_name;
-    document.getElementById("patient-meta").innerText = `Age: ${user.age} yrs | Gender: ${user.gender} | DOB: ${user.birthday} | System ID: HLX-00${user.user_id}`;
+    let allRecords = [];
+
+    if (userRaw) {
+      const user = JSON.parse(userRaw);
+      document.getElementById("patient-name").innerText = user.full_name;
+      document.getElementById("patient-meta").innerText = `Age: ${user.age} yrs | Gender: ${user.gender} | DOB: ${user.birthday} | HLX-ID: 00${user.user_id}`;
+    }
 
     async function loadMedicalHistory() {
       const timelineList = document.getElementById("timeline-list");
       try {
         const res = await fetch('/api/records/history/me', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
 
         if (res.ok && data.history && data.history.length > 0) {
-          let html = "";
-          data.history.forEach(item => {
-            let biomarkersHtml = "";
-            if (item.biomarkers && Object.keys(item.biomarkers).length > 0) {
-              biomarkersHtml = `<div style="margin-top: 0.5rem; font-size: 0.75rem; color: #38bdf8; font-family: 'JetBrains Mono', monospace;">Parameters Ingested: ${Object.keys(item.biomarkers).length} biomarkers tracked</div>`;
-            }
-
-            html += `
-              <div class="timeline-item">
-                <div class="timeline-dot"></div>
-                <div class="timeline-card">
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                    <h4 style="color: #38bdf8; font-size: 1rem; margin: 0;">${item.diagnosis_title}</h4>
-                    <span style="font-size: 0.75rem; background: rgba(255,255,255,0.1); padding: 0.2rem 0.6rem; border-radius: 6px; color: #cbd5e1;">${item.diagnosis_date || 'Recent Visit'}</span>
-                  </div>
-                  <p style="font-size: 0.85rem; color: #f1f5f9; margin-bottom: 0.5rem;">${item.description}</p>
-                  <span style="font-size: 0.75rem; color: #94a3b8;">📍 Facility / Hospital: <strong>${item.hospital_name || 'General Clinic'}</strong></span>
-                  ${biomarkersHtml}
-                </div>
-              </div>
-            `;
-          });
-          timelineList.innerHTML = html;
+          allRecords = data.history;
+          document.getElementById("totalRecordsBadge").innerText = `Total Reports: ${allRecords.length}`;
+          renderTimeline(allRecords);
         } else {
           timelineList.innerHTML = `
-            <div style="text-align: center; padding: 3rem; color: #94a3b8; background: rgba(15,23,42,0.4); border-radius: 14px; border: 1px dashed rgba(255,255,255,0.1);">
-              <p style="font-size: 2rem; margin-bottom: 0.5rem;">📭</p>
-              <h4 style="color: #fff; margin-bottom: 0.3rem;">No Historical Records Found</h4>
-              <p style="font-size: 0.85rem;">Upload lab reports or hospital checkups on your dashboard to automatically populate your medical history timeline.</p>
+            <div style="text-align: center; padding: 4rem; color: var(--text-muted); background: var(--surface); border-radius: 18px; border: 1px dashed var(--border);">
+              <p style="font-size: 2.5rem; margin-bottom: 0.5rem;">📭</p>
+              <h4 style="color: #fff; margin-bottom: 6px;">No Historical Records Ingested</h4>
+              <p style="font-size: 0.85rem;">Upload lab reports on your dashboard to populate your permanent Health Memory timeline.</p>
             </div>
           `;
         }
       } catch (err) {
-        console.error(err);
-        timelineList.innerHTML = `<p style="color: #ef4444; text-align: center;">Failed to load timeline history.</p>`;
+        timelineList.innerHTML = `<p style="color: var(--danger); text-align: center;">Failed to load timeline records.</p>`;
       }
     }
 
-    function logout() {
-      localStorage.clear();
-      window.location.href = "/";
+    function renderTimeline(records) {
+      const timelineList = document.getElementById("timeline-list");
+      let html = "";
+      
+      records.forEach(item => {
+        let biomarkersHtml = "";
+        if (item.biomarkers && Object.keys(item.biomarkers).length > 0) {
+          biomarkersHtml = `<div style="margin-top: 15px; border-top: 1px solid var(--border); padding-top: 12px;">
+            <span style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 8px;">Extracted Biomarkers:</span>`;
+          for (const [key, valObj] of Object.entries(item.biomarkers)) {
+            const val = typeof valObj === 'object' ? valObj.value : valObj;
+            const unit = typeof valObj === 'object' ? valObj.unit : '';
+            biomarkersHtml += `<span class="biomarker-badge">${key}: ${val} ${unit}</span>`;
+          }
+          biomarkersHtml += `</div>`;
+        }
+
+        html += `
+          <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div class="timeline-card">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+                <h4 style="color: var(--primary); font-size: 1.05rem; margin: 0;">${item.diagnosis_title}</h4>
+                <span style="font-size: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); padding: 4px 10px; border-radius: 8px; color: var(--text-main); font-family: monospace;">📅 ${item.diagnosis_date || 'Recent Report'}</span>
+              </div>
+              <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 12px; line-height: 1.6;">${item.description}</p>
+              <div style="font-size: 0.78rem; color: var(--text-muted);">🏥 Facility / Laboratory: <strong style="color: var(--text-main);">${item.hospital_name || 'General Clinic'}</strong></div>
+              ${biomarkersHtml}
+            </div>
+          </div>
+        `;
+      });
+      timelineList.innerHTML = html;
+    }
+
+    function filterTimeline() {
+      const query = document.getElementById("searchInput").value.toLowerCase();
+      const filtered = allRecords.filter(item => 
+        item.diagnosis_title.toLowerCase().includes(query) ||
+        (item.hospital_name && item.hospital_name.toLowerCase().includes(query)) ||
+        JSON.stringify(item.biomarkers).toLowerCase().includes(query)
+      );
+      renderTimeline(filtered);
     }
 
     loadMedicalHistory();

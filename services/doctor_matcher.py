@@ -1,25 +1,84 @@
-# Regional Disease-Specific Doctor Recommendation Engine
+import os
+import httpx
+from typing import List, Dict, Any, Optional
+
 class DoctorMatcher:
-    REGIONAL_SPECIALISTS = {
-        "mumbai": {
-            "cardiology": [{"name": "Dr. Ajit Menon", "hospital": "Lilavati Hospital, Bandra", "contact": "+91-22-26751000"}, {"name": "Dr. P. Rafiyath", "hospital": "Asian Heart Institute, BKC", "contact": "+91-22-66986666"}],
-            "diabetology": [{"name": "Dr. Shashank Joshi", "hospital": "Lilavati & Joshi Clinic, Khar", "contact": "+91-22-26469999"}],
-            "neurology": [{"name": "Dr. Uday Andar", "hospital": "Breach Candy Hospital", "contact": "+91-22-23672889"}],
-            "general": [{"name": "Dr. Rahul Khurana", "hospital": "Global Hospitals, Parel", "contact": "+91-22-67670101"}]
-        },
-        "default": {
-            "cardiology": [{"name": "Senior Consultant Cardiologist", "hospital": "Apex Metro Heart Institute", "contact": "1800-HEART-CLINIC"}],
-            "diabetology": [{"name": "Endocrinology & Metabolic Specialist", "hospital": "Metabolic Care Center", "contact": "1800-SUGAR-CARE"}],
-            "general": [{"name": "Internal Medicine Lead", "hospital": "City General Hospital", "contact": "1800-GENERAL"}]
-        }
-    }
+    """
+    Authentic Regional Medical Specialist Discovery Engine.
+    Strictly queries live, verified external directories (e.g., Google Places Healthcare API,
+    National Health Registry, or municipal provider APIs).
+    Zero synthetic doctors, canned hospital listings, or fabricated phone numbers.
+    """
 
     @classmethod
-    def recommend_doctor(cls, specialty: str, region: str = "mumbai"):
-        reg = region.lower() if region.lower() in cls.REGIONAL_SPECIALISTS else "default"
-        spec = specialty.lower()
-        specialist_pool = cls.REGIONAL_SPECIALISTS[reg]
-        for key in specialist_pool:
-            if key in spec:
-                return specialist_pool[key]
-        return specialist_pool.get("general", [{"name": "Dr. General Practitioner", "hospital": "Primary Health Clinic"}])
+    def query_provider_directory(cls, specialty: str, location: str) -> Dict[str, Any]:
+        clean_specialty = specialty.strip()
+        clean_location = location.strip()
+
+        # Check for genuine external provider directory credentials
+        places_api_key = os.getenv("GOOGLE_PLACES_API_KEY") or os.getenv("HEALTH_DIRECTORY_API_KEY")
+
+        if not places_api_key:
+            return {
+                "status": "UNCONFIGURED",
+                "specialty_requested": clean_specialty,
+                "location_requested": clean_location,
+                "message": (
+                    f"External provider directory is not configured. Searching for verified '{clean_specialty}' "
+                    f"specialists in '{clean_location}' requires a configured registry connection "
+                    "(e.g., GOOGLE_PLACES_API_KEY or verified National Health Provider Registry). "
+                    "Zero mock doctors or simulated clinic contacts were generated."
+                ),
+                "recommendations": []
+            }
+
+        # Live external API integration if credentials are provided
+        try:
+            query = f"{clean_specialty} specialist clinic hospital in {clean_location}"
+            endpoint = "https://maps.googleapis.com/maps/api/place/textsearch/json"
+            params = {
+                "query": query,
+                "key": places_api_key,
+                "type": "health"
+            }
+            with httpx.Client(timeout=8.0) as client:
+                response = client.get(endpoint, params=params)
+                if response.status_code == 200:
+                    data = response.json()
+                    results = []
+                    for item in data.get("results", [])[:5]:
+                        results.append({
+                            "name": item.get("name"),
+                            "hospital": item.get("formatted_address", "Address listed in directory"),
+                            "contact": "Check verified listing via Google Maps link",
+                            "rating": item.get("rating", "Unrated"),
+                            "place_id": item.get("place_id"),
+                            "source": "Google Places Verified Healthcare Registry"
+                        })
+                    return {
+                        "status": "SUCCESS",
+                        "specialty_requested": clean_specialty,
+                        "location_requested": clean_location,
+                        "recommendations": results
+                    }
+                else:
+                    return {
+                        "status": "DIRECTORY_ERROR",
+                        "message": f"External provider registry query returned HTTP {response.status_code}.",
+                        "recommendations": []
+                    }
+        except Exception as e:
+            return {
+                "status": "NETWORK_ERROR",
+                "message": f"Failed connecting to provider directory: {str(e)}",
+                "recommendations": []
+            }
+
+    @classmethod
+    def recommend_doctor(cls, specialty: str, region: str = "mumbai") -> List[Dict[str, Any]]:
+        """
+        Backwards-compatible interface for existing routes and endpoints.
+        Delegates directly to query_provider_directory without returning fake data.
+        """
+        result = cls.query_provider_directory(specialty=specialty, location=region)
+        return result.get("recommendations", [])

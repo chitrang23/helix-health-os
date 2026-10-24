@@ -1,94 +1,188 @@
-﻿from fastapi import APIRouter, Depends, HTTPException, status
+﻿from datetime import datetime, timezone
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from pydantic import BaseModel
-from passlib.context import CryptContext
-from datetime import timedelta, datetime, timezone
-import jwt
+from pydantic import BaseModel, EmailStr, Field
+from sqlalchemy.orm import Session
+
+from core.database import get_db
+from core.security import verify_password, get_password_hash, create_access_token
+from models.orm import User
 
 router = APIRouter(tags=["Authentication"])
 
-SECRET_KEY = "helix_super_secret_enterprise_key"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 1440
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# --- SCHEMAS ---
+class RegisterPayload(BaseModel):
+    email: EmailStr
+    password: str = Field(..., min_length=6)
+    full_name: Optional[str] = None
+    username: Optional[str] = None
+    dob: Optional[str] = None
+    birthday: Optional[str] = None  # Frontend compatibility alias
+    age: Optional[int] = None
+    gender: Optional[str] = None
+    role: Optional[str] = "patient"
 
-# Temporary in-memory user store for prototype demonstration
-# In production, this maps to SQLAlchemy PostgreSQL User table
-users_db = {
-    "chitrang@helix.os": {
-        "user_id": 1,
-        "full_name": "Chitrang Laxman Sawant",
-        "email": "chitrang@helix.os",
-        "hashed_password": pwd_context.hash("password123"),
-        "age": 21,
-        "gender": "Male",
-        "birthday": "2005-01-01"
-    }
-}
 
-class UserRegister(BaseModel):
-    full_name: str
-    email: str
+class LoginPayload(BaseModel):
+    email: EmailStr
     password: str
-    age: int
-    gender: str
-    birthday: str
 
-class PasswordReset(BaseModel):
-    email: str
-    new_password: str
 
-@router.post("/register")
-async def register(user: UserRegister):
-    if user.email in users_db:
-        raise HTTPException(status_code=400, detail="Email already registered.")
-    
-    hashed_pw = pwd_context.hash(user.password)
-    users_db[user.email] = {
-        "user_id": len(users_db) + 1,
-        "full_name": user.full_name,
-        "email": user.email,
-        "hashed_password": hashed_pw,
-        "age": user.age,
-        "gender": user.gender,
-        "birthday": user.birthday
-    }
-    return {"success": True, "message": "User registered successfully."}
+class PasswordResetPayload(BaseModel):
+    email: EmailStr
+    new_password: str = Field(..., min_length=6)
 
-@router.post("/token")
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = users_db.get(form_data.username)
-    if not user or not pwd_context.verify(form_data.password, user["hashed_password"]):
+
+# --- CORE AUTHENTICATION ENDPOINTS ---
+
+@router.post("/register", status_code=status.HTTP_201_CREATED)
+def register_user(payload: RegisterPayload, db: Session = Depends(get_db)):
+    """
+    Registers a new user directly into the database.
+    Enforces normalized emails, safe password hashing, and active status.
+    """
+    clean_email = payload.email.strip().lower()
+    clean_username = (payload.username or clean_email.split("@")[0]).strip()
+    birth_date = payload.dob or payload.birthday
+
+    # Prevent duplicate registrations
+    existing_user = db.query(User).filter(
+        (User.email == clean_email) | (User.username == clean_username)
+    ).first()
+    if existing_user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="An account with this email or username already exists."
         )
-    
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    expire = datetime.now(timezone.utc) + access_token_expires
-    to_encode = {"sub": user["email"], "exp": expire}
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
+    # Hash password safely
+    hashed_pwd = get_password_hash(payload.password)
+
+    new_user = User(
+        username=clean_username,
+        email=clean_email,
+        hashed_password=hashed_pwd,
+        full_name=payload.full_name or clean_username.title(),
+        dob=birth_date,
+        gender=payload.gender or "unknown",
+        role=payload.role or "patient",
+        is_active=True
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    access_token = create_access_token(data={"sub": new_user.email, "role": new_user.role})
     return {
-        "access_token": encoded_jwt,
+        "status": "success",
+        "message": "User registered successfully.",
+        "access_token": access_token,
         "token_type": "bearer",
         "user": {
-            "user_id": user["user_id"],
-            "full_name": user["full_name"],
-            "email": user["email"],
-            "age": user["age"],
-            "gender": user["gender"],
-            "birthday": user["birthday"]
+            "id": new_user.id,
+            "email": new_user.email,
+            "username": new_user.username,
+            "full_name": new_user.full_name,
+            "role": new_user.role
         }
     }
 
-@router.post("/api/auth/reset-password")
-async def reset_password(req: PasswordReset):
-    user = users_db.get(req.email)
+
+@router.post("/login")
+def login_json(payload: LoginPayload, db: Session = Depends(get_db)):
+    """
+    Standard JSON login endpoint for web frontend compatibility.
+    """
+    clean_email = payload.email.strip().lower()
+    user = db.query(User).filter(User.email == clean_email).first()
+
+    if not user or not verify_password(payload.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is inactive."
+        )
+
+    access_token = create_access_token(data={"sub": user.email, "role": user.role})
+    return {
+        "status": "success",
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user_id": user.id,
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "username": user.username,
+            "full_name": user.full_name,
+            "role": user.role
+        }
+    }
+
+
+@router.post("/token")
+def login_for_access_token(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db)
+):
+    """
+    OAuth2 standard password token flow endpoint.
+    Accepts either normalized email or username in the form username field.
+    """
+    identifier = form_data.username.strip().lower()
+    user = db.query(User).filter(
+        (User.email == identifier) | (User.username == identifier)
+    ).first()
+
+    if not user or not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username/email or password.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is inactive."
+        )
+
+    access_token = create_access_token(data={"sub": user.email, "role": user.role})
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "username": user.username,
+            "full_name": user.full_name,
+            "role": user.role
+        }
+    }
+
+
+@router.post("/reset-password")
+def reset_password(payload: PasswordResetPayload, db: Session = Depends(get_db)):
+    """
+    Updates the hashed password for a verified registered email in the database.
+    """
+    clean_email = payload.email.strip().lower()
+    user = db.query(User).filter(User.email == clean_email).first()
+
     if not user:
-        raise HTTPException(status_code=404, detail="Email address not found in system.")
-    
-    user["hashed_password"] = pwd_context.hash(req.new_password)
-    return {"success": True, "message": "Password successfully reset."}
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Email address not found in system."
+        )
+
+    user.hashed_password = get_password_hash(payload.new_password)
+    db.commit()
+
+    return {"status": "success", "message": "Password successfully reset."}

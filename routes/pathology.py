@@ -1,3 +1,4 @@
+import os
 from fastapi import APIRouter, File, Form, UploadFile, HTTPException
 from google import genai
 from google.genai import types
@@ -14,10 +15,9 @@ async def synthesize_pathology(
         if not image_bytes:
             raise HTTPException(status_code=400, detail="Uploaded scan file is empty.")
 
-        # Initialize the Gemini client (picks up GEMINI_API_KEY from environment variables)
-        client = genai.Client()
+        api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+        client = genai.Client(api_key=api_key) if api_key else genai.Client()
 
-        # Call Gemini using the multi-modal capable model
         response = client.models.generate_content(
             model='gemini-2.5-flash',
             contents=[

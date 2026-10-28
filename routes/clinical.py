@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from core.database import get_db
 from core.security import get_current_authenticated_user
+from core.self_learning_engine import SelfLearningEngine
 from models.orm import (
     User,
     SourceDocument,
@@ -102,7 +103,6 @@ def _derive_clinical_flag(
 
     if val_num is not None and ref_range:
         low_b, high_b = _parse_reference_bounds(ref_range)
-        # Verify bounds are on a plausible scale (prevents OCR decimal-drop false positives like 15-25 vs 1.08)
         if low_b is not None and high_b is not None:
             if not (val_num < 5.0 and low_b >= 10.0 and high_b >= 15.0):
                 if val_num > high_b:
@@ -204,10 +204,6 @@ class ClinicalAIService:
     def _dynamic_quantitative_analysis(
         self, biomarker: str, value: str, unit: Optional[str], ref_range: Optional[str]
     ) -> str:
-        """
-        Mathematically evaluates the recorded value against the extracted reference range
-        without any hardcoded biomarker names.
-        """
         unit_str = f" {unit.strip()}" if unit and unit.strip() and unit.strip().lower() != "no unit specified" else ""
         ref_clean = (ref_range or "").strip()
 
@@ -278,9 +274,28 @@ def explain_biomarker_route(
     req: BiomarkerExplainReq,
     current_user: User = Depends(get_current_authenticated_user)
 ):
+    # 1. Check local self-learning store first (Standalone offline mode)
+    local_learned_exp = SelfLearningEngine.get_local_knowledge(req.biomarker)
+    if local_learned_exp:
+        return {
+            "success": True,
+            "biomarker": req.biomarker,
+            "explanation": f"{local_learned_exp} (Locally optimized via self-learning engine)"
+        }
+
+    # 2. Fall back to dynamic calculation / offline rules if no local knowledge exists
     explanation = clinical_ai.explain_biomarker(
         req.biomarker, req.value, req.unit, req.printed_reference_range
     )
+    
+    # Save newly generated explanation to local store for future self-improvement
+    SelfLearningEngine.record_interaction(
+        analyte=req.biomarker,
+        value=req.value,
+        unit=req.unit,
+        explanation=explanation
+    )
+
     return {
         "success": True,
         "biomarker": req.biomarker,
@@ -295,12 +310,6 @@ def predict_30_day_trajectory(
     current_user: User = Depends(get_current_authenticated_user),
     db: Session = Depends(get_db)
 ):
-    """
-    Computes a 30-day physiological counterfactual projection combining:
-    1. Empirical Biomarker Velocity (dY/dt across prior hospital encounters in SQLite)
-    2. Reference-Range Homeostatic Directionality (restores Low markers upward, clears High markers downward)
-    3. Autonomic & Metabolic Lifestyle Elasticity (Sleep, Activity, Nutrition)
-    """
     historical_obs = (
         db.query(ClinicalObservation)
         .filter(
@@ -312,7 +321,6 @@ def predict_30_day_trajectory(
         .all()
     )
 
-    # 1. Empirical Biomarker Velocity (dY/dt)
     velocity_drift = 0.0
     latest_flag = "Normal"
     latest_ref = None
@@ -329,10 +337,8 @@ def predict_30_day_trajectory(
             last_val = latest_obs.normalized_numeric_value
             if first_val and first_val > 0 and last_val is not None:
                 raw_trend = (last_val - first_val) / first_val
-                # Dampen historical momentum over a 30-day homeostatic window
                 velocity_drift = max(-0.16, min(0.16, raw_trend * 0.22))
 
-    # 2. Evaluate Lifestyle Regimen Quality Score (-1.0 = deleterious to +1.0 = restorative)
     regimen_score = 0.0
     sleep_low = (req.sleep or "").lower()
     act_low = (req.activity or "").lower()
@@ -359,9 +365,6 @@ def predict_30_day_trajectory(
     elif any(k in diet_low for k in ["processed", "high", "irregular", "refined"]):
         regimen_score -= 0.065
 
-    # 3. Apply Homeostatic Directionality
-    # If the marker is depleted (Low), a restorative regimen (+score) increases levels toward normal.
-    # If the marker is elevated (High) or Normal, a restorative regimen (+score) promotes clearance/reduction.
     if latest_flag == "Low":
         lifestyle_delta = regimen_score
     else:
@@ -524,7 +527,6 @@ async def process_lab_report(
     sha256_hash = hashlib.sha256(file_bytes).hexdigest()
     fallback_patient = current_user.full_name or current_user.email or "Authenticated Patient"
 
-    # Fast-path cache retrieval
     existing_docs = (
         db.query(SourceDocument)
         .filter(SourceDocument.user_id == current_user.id, SourceDocument.file_sha256 == sha256_hash)
@@ -581,6 +583,17 @@ async def process_lab_report(
                         "date": obs_date_str,
                         "value": obs.normalized_numeric_value
                     })
+
+            # Self-learning engine index update on cache hit
+            for analyte, details in response_biomarkers.items():
+                local_exp = f"{analyte} was recorded at {details['value']} {details['unit']} with reference range {details['reference_range']}."
+                SelfLearningEngine.record_interaction(
+                    analyte=analyte,
+                    value=str(details['value']),
+                    unit=details['unit'],
+                    explanation=local_exp,
+                    user_corrected=False
+                )
 
             primary_doc = existing_docs[0]
             unique_dates = sorted(list(set(all_valid_dates)))
@@ -682,7 +695,6 @@ async def process_lab_report(
                 raw_val = str(obs.get("value_raw", "")).strip()
                 normalized_num = None
 
-                # Isolate leading numeric value while preserving decimal accuracy
                 num_match = re.search(r"[-+]?\d*\.?\d+", raw_val)
                 if num_match:
                     try:
@@ -739,6 +751,17 @@ async def process_lab_report(
                         "date": obs_date_formatted,
                         "value": normalized_num
                     })
+
+        # Self-learning engine index update on new extraction
+        for analyte, details in response_biomarkers.items():
+            local_exp = f"{analyte} was recorded at {details['value']} {details['unit']} with reference range {details['reference_range']}."
+            SelfLearningEngine.record_interaction(
+                analyte=analyte,
+                value=str(details['value']),
+                unit=details['unit'],
+                explanation=local_exp,
+                user_corrected=False
+            )
 
         db.commit()
 

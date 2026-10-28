@@ -10,17 +10,27 @@ let trendChartInstance = null;
 let simulationChartInstance = null;
 let activeObservationsMap = {};
 
-// Fast in-memory cache to prevent lag and race conditions
 let currentSelectionController = null;
 let currentSelectedAnalyte = "";
 const biomarkerExplanationCache = {};
+let currentLanguage = "en";
 
 window.addEventListener('DOMContentLoaded', async () => {
-    // 1. Populate User Profile
+    // Ensure default language is English if not explicitly set
+    let savedLang = localStorage.getItem("app_lang");
+    if (!savedLang) {
+        savedLang = "en";
+        localStorage.setItem("app_lang", "en");
+    }
+    const langSelector = document.getElementById("globalLangSelector");
+    if (langSelector) {
+        langSelector.value = savedLang;
+    }
+
     if (userRaw) {
         try {
             const user = JSON.parse(userRaw);
-            const displayName = user.full_name || user.email || 'MS. SNEHA RAJU SHINDE';
+            const displayName = user.full_name || user.email || 'Authenticated Patient';
             const nameBadge = document.getElementById('userNameBadge');
             const metaPatient = document.getElementById('metaPatientName');
             if (nameBadge) nameBadge.innerText = displayName;
@@ -30,7 +40,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // 2. Restore Persisted State Across Window / Tab Navigation
     const cachedExtraction = localStorage.getItem("helix_active_report");
     if (cachedExtraction) {
         try {
@@ -44,7 +53,9 @@ window.addEventListener('DOMContentLoaded', async () => {
             if (parsedData.report_date && document.getElementById('metaDate')) {
                 document.getElementById('metaDate').innerText = parsedData.report_date;
             }
-            renderExtractedParameters(parsedData.extracted_biomarkers || {});
+            if (parsedData.extracted_biomarkers) {
+                renderExtractedParameters(parsedData.extracted_biomarkers);
+            }
         } catch (err) {
             console.error("Cache restoration failure:", err);
             renderEmptyTrendChart();
@@ -57,37 +68,62 @@ window.addEventListener('DOMContentLoaded', async () => {
     await loadUserAnalytes();
 });
 
-function switchTab(tabId, element) {
+window.switchTab = function(tabId, element) {
     document.querySelectorAll('.section-view').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.nav-links a').forEach(el => el.classList.remove('active'));
+    
     const target = document.getElementById(tabId);
-    if (target) target.classList.add('active');
-    if (element) element.classList.add('active');
+    if (target) {
+        target.classList.add('active');
+    }
+    
+    if (element) {
+        element.classList.add('active');
+    } else {
+        document.querySelectorAll('.nav-links a').forEach(a => {
+            const onclickAttr = a.getAttribute('onclick');
+            if (onclickAttr && onclickAttr.includes(`'${tabId}'`)) {
+                a.classList.add('active');
+            }
+        });
+    }
 
-    // Retain UI state when switching back to dashboard
-    if (tabId === 'dashboard-view' || tabId === 'dashboard') {
+    if (tabId === 'organRadar') {
+        if (typeof computeAndRenderOrganRadar === 'function') {
+            computeAndRenderOrganRadar();
+        }
+    }
+
+    if (tabId === 'dashboard') {
         const cached = localStorage.getItem("helix_active_report");
         if (cached) {
             try {
                 const parsed = JSON.parse(cached);
-                renderExtractedParameters(parsed.extracted_biomarkers || {});
+                if (parsed.extracted_biomarkers) {
+                    renderExtractedParameters(parsed.extracted_biomarkers);
+                }
             } catch (e) {
                 console.error("Tab switch hydration error:", e);
             }
         }
     }
-}
+};
 
-function logout() {
+window.switchGlobalLanguage = function(lang) {
+    currentLanguage = lang;
+    localStorage.setItem("app_lang", lang);
+    if (typeof window.applyOfflineLocalization === "function") {
+        window.applyOfflineLocalization(lang);
+    }
+    window.location.reload();
+};
+
+window.logout = function() {
     localStorage.removeItem("helix_token");
     localStorage.removeItem("helix_user");
     localStorage.removeItem("helix_active_report");
     window.location.href = "/";
-}
-
-// -------------------------------------------------------------
-// 1. ANALYTE DISCOVERY & TIME-SERIES SYNCHRONIZATION
-// -------------------------------------------------------------
+};
 
 async function loadUserAnalytes() {
     const markerSelect = document.getElementById("pred-marker");
@@ -145,71 +181,94 @@ async function handleTwinMarkerChange(analyteName) {
     }
 }
 
-// -------------------------------------------------------------
-// 2. DOCUMENT INGESTION & GROUNDED EXTRACTION
-// -------------------------------------------------------------
-
-document.getElementById('uploadForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
+window.handleReportUpload = async function(e) {
+    if (e && typeof e.preventDefault === "function") {
+        e.preventDefault();
+        e.stopPropagation();
+    }
     const fileInput = document.getElementById('reportFile');
     const statusDiv = document.getElementById('uploadStatus');
-    if (!fileInput || !fileInput.files[0]) return;
+    
+    if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+        if (statusDiv) statusDiv.innerHTML = `<span style="color: var(--warning);">⚠️ Please select a report file first.</span>`;
+        return false;
+    }
 
     const formData = new FormData();
     formData.append('file', fileInput.files[0]);
-    statusDiv.innerHTML = `<span style="color: var(--primary);">⏳ Ingesting multi-page report and running clinical validation...</span>`;
+    if (statusDiv) {
+        statusDiv.innerHTML = `<span style="color: var(--primary);">⏳ Ingesting multi-page report and running clinical validation...</span>`;
+    }
 
     try {
-        const response = await fetch('/api/records/upload-report', {
+        let response = await fetch('/api/records/upload-report', {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` },
             body: formData
         });
 
+        if (response.status === 404) {
+            response = await fetch('/api/clinical/upload-report', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+        }
+
         const result = await response.json();
         if (response.ok && result.success) {
             const cacheNotice = result.cached ? " (Verified Index)" : "";
-            statusDiv.innerHTML = `<span style="color: var(--accent);">✅ ${result.message}${cacheNotice}</span>`;
+            if (statusDiv) {
+                statusDiv.innerHTML = `<span style="color: var(--accent);">✅ ${result.message}${cacheNotice}</span>`;
+            }
             
             const metaPat = document.getElementById('metaPatientName');
             const metaHosp = document.getElementById('metaHospital');
             const metaDt = document.getElementById('metaDate');
 
-            if (metaPat) metaPat.innerText = result.patient_name || 'MS. SNEHA RAJU SHINDE';
-            if (metaHosp) metaHosp.innerText = result.hospital_name || 'UMC Hospitals - Navi Mumbai';
+            if (metaPat) metaPat.innerText = result.patient_name || 'Authenticated Patient';
+            if (metaHosp) metaHosp.innerText = result.hospital_name || 'Diagnostic Laboratory';
             if (metaDt) metaDt.innerText = result.report_date || 'Encounter Series Verified';
+
+            const biomarkers = result.extracted_biomarkers || {};
 
             localStorage.setItem("helix_active_report", JSON.stringify({
                 patient_name: result.patient_name,
                 hospital_name: result.hospital_name,
                 report_date: result.report_date,
-                extracted_biomarkers: result.extracted_biomarkers || {}
+                extracted_biomarkers: biomarkers
             }));
 
-            renderExtractedParameters(result.extracted_biomarkers || {});
+            renderExtractedParameters(biomarkers);
             await loadUserAnalytes();
         } else {
-            statusDiv.innerHTML = `<span style="color: var(--danger);">⚠️ ${result.detail || result.message || 'Verification halted.'}</span>`;
+            if (statusDiv) {
+                statusDiv.innerHTML = `<span style="color: var(--danger);">⚠️ ${result.detail || result.message || 'Verification halted.'}</span>`;
+            }
         }
     } catch (err) {
-        statusDiv.innerHTML = `<span style="color: var(--danger);">❌ Ingestion connection failed. Please verify server state.</span>`;
+        console.error("Upload error:", err);
+        if (statusDiv) {
+            statusDiv.innerHTML = `<span style="color: var(--danger);">❌ Ingestion connection failed. Verify server state.</span>`;
+        }
     }
-});
+    return false;
+};
 
 function renderExtractedParameters(biomarkers) {
     const container = document.getElementById('paramListContainer');
     if (!container) return;
     container.innerHTML = '';
-    activeObservationsMap = biomarkers;
+    activeObservationsMap = biomarkers || {};
 
-    const keys = Object.keys(biomarkers);
+    const keys = Object.keys(activeObservationsMap);
     if (keys.length === 0) {
         container.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem; padding: 12px;">No parameters parsed from document.</p>';
         return;
     }
 
     keys.forEach((key, index) => {
-        const item = biomarkers[key];
+        const item = activeObservationsMap[key];
         const card = document.createElement('div');
         
         let flagBorderColor = 'var(--accent)';
@@ -251,24 +310,20 @@ function renderExtractedParameters(biomarkers) {
     });
 
     const firstKey = keys[0];
-    selectBiomarker(firstKey, biomarkers[firstKey].value, biomarkers[firstKey].unit, biomarkers[firstKey].reference_range);
+    selectBiomarker(firstKey, activeObservationsMap[firstKey].value, activeObservationsMap[firstKey].unit, activeObservationsMap[firstKey].reference_range);
 }
-
-// -------------------------------------------------------------
-// 3. BIOMARKER INTELLIGENCE & LONGITUDINAL TRAJECTORY (ZERO-LAG)
-// -------------------------------------------------------------
 
 function parseReferenceLimits(refStr) {
     if (!refStr) return { min: null, max: null };
-    const rangeMatch = refStr.match(/(\d+(?:\.\d+)?)\s*(?:-|to)\s*(\d+(?:\.\d+)?)/i);
+    const rangeMatch = String(refStr).match(/(\d+(?:\.\d+)?)\s*(?:-|to)\s*(\d+(?:\.\d+)?)/i);
     if (rangeMatch) {
         return { min: parseFloat(rangeMatch[1]), max: parseFloat(rangeMatch[2]) };
     }
-    const lessMatch = refStr.match(/<\s*(\d+(?:\.\d+)?)/);
+    const lessMatch = String(refStr).match(/<\s*(\d+(?:\.\d+)?)/);
     if (lessMatch) {
         return { min: 0, max: parseFloat(lessMatch[1]) };
     }
-    const greaterMatch = refStr.match(/>\s*(\d+(?:\.\d+)?)/);
+    const greaterMatch = String(refStr).match(/>\s*(\d+(?:\.\d+)?)/);
     if (greaterMatch) {
         return { min: parseFloat(greaterMatch[1]), max: null };
     }
@@ -278,7 +333,6 @@ function parseReferenceLimits(refStr) {
 async function selectBiomarker(biomarkerName, value, unit, refRange) {
     currentSelectedAnalyte = biomarkerName;
 
-    // Abort previous background calls to eliminate race conditions
     if (currentSelectionController) {
         currentSelectionController.abort();
     }
@@ -291,7 +345,6 @@ async function selectBiomarker(biomarkerName, value, unit, refRange) {
 
     titleEl.innerText = biomarkerName;
 
-    // Immediate zero-ms response if cached
     if (biomarkerExplanationCache[biomarkerName]) {
         renderExplanationHTML(expEl, biomarkerName, value, unit, refRange, biomarkerExplanationCache[biomarkerName]);
     } else {
@@ -337,7 +390,6 @@ async function selectBiomarker(biomarkerName, value, unit, refRange) {
         const histRes = responses[0];
         const expRes = responses.length > 1 ? responses[1] : null;
 
-        // Ensure this response still belongs to the active card
         if (currentSelectedAnalyte !== biomarkerName) return;
 
         if (expRes && expRes.ok) {
@@ -355,18 +407,9 @@ async function selectBiomarker(biomarkerName, value, unit, refRange) {
         if (histRes.ok) {
             const histData = await histRes.json();
             if (histData.history && histData.history.length > 0) {
-                // Deduplicate encounters and sort chronologically
-                const uniqueEncounters = {};
-                histData.history.forEach(h => {
-                    const cleanNum = parseFloat(String(h.value).replace(/[^\d\.]/g, ''));
-                    if (!isNaN(cleanNum)) {
-                        uniqueEncounters[h.date] = cleanNum;
-                    }
-                });
-
-                const sortedDates = Object.keys(uniqueEncounters).sort((a, b) => new Date(a) - new Date(b));
-                histDates = sortedDates;
-                histValues = sortedDates.map(d => uniqueEncounters[d]);
+                const sortedHistory = histData.history.sort((a, b) => new Date(a.date) - new Date(b));
+                histDates = sortedHistory.map(h => h.date);
+                histValues = sortedHistory.map(h => parseFloat(String(h.value).replace(/[^\d\.]/g, ''))).filter(v => !isNaN(v));
             }
         }
     } catch (e) {
@@ -376,7 +419,6 @@ async function selectBiomarker(biomarkerName, value, unit, refRange) {
 
     if (currentSelectedAnalyte !== biomarkerName) return;
 
-    // Render longitudinal trajectory with reference range bands
     const currentNum = parseFloat(String(value).replace(/[^\d\.]/g, ''));
     if (histDates.length > 0 && !isNaN(currentNum)) {
         renderTrendChart(biomarkerName, histDates, histValues, unit || '', refRange);
@@ -409,7 +451,6 @@ function renderTrendChart(biomarkerName, dates, values, unit, refRange) {
     const ref = parseReferenceLimits(refRange);
     const datasets = [];
 
-    // 1. Patient Observation Trajectory Line
     datasets.push({
         label: `Patient Result${cleanUnit}`,
         data: values,
@@ -426,7 +467,6 @@ function renderTrendChart(biomarkerName, dates, values, unit, refRange) {
         order: 1
     });
 
-    // 2. Upper Reference Limit Line
     if (ref.max !== null) {
         datasets.push({
             label: `Upper Normal (${ref.max})`,
@@ -440,7 +480,6 @@ function renderTrendChart(biomarkerName, dates, values, unit, refRange) {
         });
     }
 
-    // 3. Lower Reference Limit Line
     if (ref.min !== null) {
         datasets.push({
             label: `Lower Normal (${ref.min})`,
@@ -454,7 +493,6 @@ function renderTrendChart(biomarkerName, dates, values, unit, refRange) {
         });
     }
 
-    // Calculate intelligent Y-axis boundaries
     let allPoints = [...values];
     if (ref.min !== null) allPoints.push(ref.min);
     if (ref.max !== null) allPoints.push(ref.max);
@@ -510,11 +548,7 @@ function renderEmptyTrendChart() {
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 }
 
-// -------------------------------------------------------------
-// 4. DIGITAL TWIN SIMULATION & PREDICTION
-// -------------------------------------------------------------
-
-async function run30DayTwinSimulation() {
+window.run30DayTwinSimulation = async function() {
     const markerEl = document.getElementById("pred-marker");
     const baselineEl = document.getElementById("pred-baseline");
     const sleepEl = document.getElementById("lifestyle-sleep");
@@ -622,11 +656,7 @@ function renderEmptySimulationChart() {
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 }
 
-// -------------------------------------------------------------
-// 5. CHAT, SOAP, DRUG SAFETY & SOMATIC MODULES
-// -------------------------------------------------------------
-
-async function sendGeminiChat() {
+window.sendGeminiChat = async function() {
     const input = document.getElementById('chatInput');
     const messages = document.getElementById('chatMessages');
     if (!input || !messages) return;
@@ -638,7 +668,7 @@ async function sendGeminiChat() {
     input.value = '';
 
     try {
-        const res = await fetch('/api/chat/', {
+        const res = await fetch('/api/chat', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -655,7 +685,7 @@ async function sendGeminiChat() {
     }
 }
 
-async function loadSoapBriefing() {
+window.loadSoapBriefing = async function() {
     const box = document.getElementById("soapOutputBox");
     if (!box) return;
 
@@ -682,7 +712,7 @@ async function loadSoapBriefing() {
     }
 }
 
-async function runDashboardDrugSafetyAudit() {
+window.runDashboardDrugSafetyAudit = async function() {
     const rxInput = document.getElementById("rx-input");
     const suppInput = document.getElementById("supp-input");
     const output = document.getElementById("safety-output");
@@ -722,7 +752,7 @@ async function runDashboardDrugSafetyAudit() {
     }
 }
 
-async function searchSpecialists() {
+window.searchSpecialists = async function() {
     const specRes = document.getElementById('specialistResults');
     const regionEl = document.getElementById('specRegion');
     const catEl = document.getElementById('specCategory');
@@ -759,7 +789,7 @@ async function searchSpecialists() {
     }
 }
 
-async function submitStressCheckIn() {
+window.submitStressCheckIn = async function() {
     const rangeEl = document.getElementById('stressRange');
     const triggersEl = document.getElementById('stressTriggersInput');
     const output = document.getElementById('stressResultsOutput');
@@ -793,7 +823,7 @@ async function submitStressCheckIn() {
 }
 
 let breathInterval = null;
-function toggleBreathingExercise() {
+window.toggleBreathingExercise = function() {
     const btn = document.getElementById('breathBtn');
     const circle = document.getElementById('breathCircle');
     const inst = document.getElementById('breathInstruction');
@@ -836,7 +866,7 @@ function toggleBreathingExercise() {
     breathInterval = setInterval(runCycle, 4000);
 }
 
-async function runPathologySynthesis() {
+window.runPathologySynthesis = async function() {
     const fileInput = document.getElementById('scanFile');
     const focusSelect = document.getElementById('scanFocus');
     const resArea = document.getElementById('synthResult');
@@ -871,3 +901,352 @@ async function runPathologySynthesis() {
         resText.innerHTML = `<span style="color: var(--danger);">❌ Multi-modal analysis connection failed.</span>`;
     }
 }
+
+window.handleReportUpload = async function(e) {
+    if (e && typeof e.preventDefault === "function") {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    const fileInput = document.getElementById("reportFile");
+    const statusDiv = document.getElementById("uploadStatus");
+
+    if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+        if (statusDiv) {
+            statusDiv.innerHTML = `<span style="color: var(--warning);">⚠️ Please choose a report file first.</span>`;
+        }
+        return false;
+    }
+
+    const formData = new FormData();
+    formData.append("file", fileInput.files[0]);
+    if (statusDiv) {
+        statusDiv.innerHTML = `<span style="color: var(--primary);">⏳ Ingesting multi-page report and running clinical validation...</span>`;
+    }
+
+    try {
+        let response = await fetch("/api/records/upload-report", {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${token}` },
+            body: formData
+        });
+
+        if (response.status === 404) {
+            response = await fetch("/api/clinical/upload-report", {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${token}` },
+                body: formData
+            });
+        }
+
+        const result = await response.json();
+        if (response.ok && result.success) {
+            const cacheNotice = result.cached ? " (Instant Verified Index)" : "";
+            if (statusDiv) {
+                statusDiv.innerHTML = `<span style="color: var(--accent);">✅ ${result.message}${cacheNotice}</span>`;
+            }
+
+            const metaPat = document.getElementById("metaPatientName");
+            const metaHosp = document.getElementById("metaHospital");
+            const metaDt = document.getElementById("metaDate");
+
+            if (metaPat) metaPat.innerText = result.patient_name || 'Authenticated Patient';
+            if (metaHosp) metaHosp.innerText = result.hospital_name || 'Diagnostic Laboratory';
+            if (metaDt) metaDt.innerText = result.report_date || 'Verified Encounter';
+
+            const biomarkers = result.extracted_biomarkers || {};
+
+            localStorage.setItem("helix_active_report", JSON.stringify({
+                patient_name: result.patient_name,
+                hospital_name: result.hospital_name,
+                report_date: result.report_date,
+                extracted_biomarkers: biomarkers
+            }));
+
+            renderExtractedParameters(biomarkers);
+            await loadUserAnalytes();
+        } else {
+            if (statusDiv) {
+                statusDiv.innerHTML = `<span style="color: var(--danger);">⚠️ ${result.detail || result.message || "Verification halted."}</span>`;
+            }
+        }
+    } catch (err) {
+        console.error("Upload error:", err);
+        if (statusDiv) {
+            statusDiv.innerHTML = `<span style="color: var(--danger);">❌ Ingestion connection failed. Verify server state.</span>`;
+        }
+    }
+    return false;
+};
+
+// -------------------------------------------------------------
+// MULTI-ORGAN HOMEOSTATIC RADAR & ZERO-API CLINICAL INDICES
+// -------------------------------------------------------------
+
+let organRadarChartInstance = null;
+
+const _existingSwitchTab = window.switchTab;
+if (typeof window.switchTab === "function") {
+    window.switchTab = function(tabId, element) {
+        if (_existingSwitchTab) _existingSwitchTab(tabId, element);
+        if (tabId === 'organRadar') {
+            computeAndRenderOrganRadar();
+        }
+    };
+}
+
+function computeAndRenderOrganRadar() {
+    let map = typeof activeObservationsMap !== "undefined" ? activeObservationsMap : {};
+    if (Object.keys(map).length === 0) {
+        const cached = localStorage.getItem("helix_active_report");
+        if (cached) {
+            try { map = JSON.parse(cached).extracted_biomarkers || {}; } catch (e) {}
+        }
+    }
+
+    const findBm = (keywords) => {
+        for (const [k, obj] of Object.entries(map)) {
+            if (keywords.some(kw => k.toLowerCase().includes(kw))) {
+                const val = parseFloat(String(obj.value).replace(/[^\d\.\-]/g, ""));
+                if (!isNaN(val)) return { name: k, value: val, unit: obj.unit || "", ref: obj.reference_range || "" };
+            }
+        }
+        return null;
+    };
+
+    const hb = findBm(["hemoglobin", "haemoglobin", "hb"]);
+    const rbc = findBm(["total rbc", "rbc"]);
+    const wbc = findBm(["wbc", "leukocyte", "tlc"]);
+    const neut = findBm(["neutrophil"]);
+    const lymph = findBm(["lymphocyte"]);
+    const sgpt = findBm(["sgpt", "alt"]);
+    const creat = findBm(["creatinine"]);
+    const gluc = findBm(['glucose', 'sugar', 'hba1c']);
+
+    const hema = hb ? (hb.value >= 12 && hb.value <= 17 ? 92 : 65) : 78;
+    const imm = wbc ? (wbc.value >= 4000 && wbc.value <= 11000 ? 90 : 68) : 82;
+    const hep = sgpt ? (sgpt.value <= 45 ? 94 : 70) : 85;
+    const ren = creat ? (creat.value <= 1.2 ? 95 : 60) : 88;
+    const met = gluc ? (gluc.value <= 100 ? 92 : 72) : 80;
+
+    const overall = Math.round((hema + imm + hep + ren + met) / 5);
+    const badge = document.getElementById("allostaticScoreBadge");
+    if (badge) badge.innerText = `Homeostatic Index: ${overall}/100`;
+
+    const canvas = document.getElementById("organRadarChart");
+    if (canvas) {
+        const ctx = canvas.getContext("2d");
+        if (organRadarChartInstance) organRadarChartInstance.destroy();
+        organRadarChartInstance = new Chart(ctx, {
+            type: "radar",
+            data: {
+                labels: ['Hematopoietic & O₂', 'Immunological', 'Hepatic Function', 'Renal Clearance', 'Metabolic Control'],
+                datasets: [{
+                    label: 'Patient Homeostatic Resilience',
+                    data: [hema, imm, hep, ren, met],
+                    backgroundColor: 'rgba(0, 242, 254, 0.18)',
+                    borderColor: '#00f2fe',
+                    borderWidth: 2.5,
+                    pointBackgroundColor: '#00f2fe'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        min: 20, max: 100,
+                        grid: { color: 'rgba(255, 255, 255, 0.08)' },
+                        pointLabels: { color: '#f8fafc', font: { size: 11, weight: '600' } },
+                        ticks: { display: false }
+                    }
+                },
+                plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8' } } }
+            }
+        });
+    }
+
+    const derivedList = [];
+    if (findBm(["mcv"]) && rbc && rbc.value > 0) {
+        const mcvVal = findBm(["mcv"]).value;
+        const mentzer = (mcvVal / rbc.value).toFixed(1);
+        derivedList.push({
+            title: "Mentzer Erythrocyte Index (MCV ÷ RBC)",
+            val: mentzer,
+            note: mentzer > 13 ? "Suggestive of Iron-Deficiency Kinetics (>13.0)" : "Normal / Thalassemia Screen (<13.0)",
+            color: mentzer > 13 ? "var(--warning)" : "var(--accent)"
+        });
+    }
+    if (neut && lymph && lymph.value > 0) {
+        const nlr = (neut.value / lymph.value).toFixed(2);
+        derivedList.push({
+            title: "Neutrophil-to-Lymphocyte Ratio (NLR)",
+            val: nlr,
+            note: nlr > 3.0 ? "Elevated Systemic Stress (>3.0)" : "Balanced Inflammatory Load (1.0–3.0)",
+            color: nlr > 3.0 ? "var(--danger)" : "var(--accent)"
+        });
+    }
+
+    const box = document.getElementById("derivedIndicesContainer");
+    if (box) {
+        box.innerHTML = derivedList.length ? derivedList.map(item => `
+            <div style="background: rgba(255,255,255,0.03); border-left: 4px solid ${item.color}; padding: 12px; border-radius: 10px; border: 1px solid var(--border);">
+                <div style="display: flex; justify-content: space-between;">
+                    <strong style="font-size: 0.84rem; color: #fff;">${item.title}</strong>
+                    <span style="font-family: monospace; font-weight: 800; color: ${item.color};">${item.val}</span>
+                </div>
+                <div style="font-size: 0.78rem; color: #cbd5e1; margin-top: 4px;">${item.note}</div>
+            </div>
+        `).join("") : `<div style="color: var(--text-muted); font-size: 0.85rem;">Upload a report to compute derived indices.</div>`;
+    }
+}
+
+window.downloadFHIRBundle = function() {
+    const map = typeof activeObservationsMap !== "undefined" ? activeObservationsMap : {};
+    let entries = [];
+    
+    if (Object.keys(map).length > 0) {
+        entries = Object.entries(map).map(([name, obj], idx) => ({
+            resource: {
+                resourceType: "Observation",
+                id: `obs-${idx + 1}`,
+                status: "final",
+                code: { text: name },
+                valueQuantity: { value: parseFloat(obj.value) || 0, unit: obj.unit || "" }
+            }
+        }));
+    } else {
+        const cached = localStorage.getItem("helix_active_report");
+        if (cached) {
+            try {
+                const parsed = JSON.parse(cached);
+                const biomarkers = parsed.extracted_biomarkers || {};
+                entries = Object.entries(biomarkers).map(([name, obj], idx) => ({
+                    resource: {
+                        resourceType: "Observation",
+                        id: `obs-${idx + 1}`,
+                        status: "final",
+                        code: { text: name },
+                        valueQuantity: { value: parseFloat(obj.value) || 0, unit: obj.unit || "" }
+                    }
+                }));
+            } catch (e) {}
+        }
+    }
+
+    const bundle = { resourceType: "Bundle", type: "collection", entry: entries };
+    const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "helix_hl7_fhir_bundle.json";
+    a.click();
+    URL.revokeObjectURL(url);
+};
+
+// -------------------------------------------------------------
+// REAL-WORLD STRESS MANAGEMENT & NEURO-SOMATIC REGULATION
+// -------------------------------------------------------------
+
+let sighInterval = null;
+
+window.togglePhysiologicalSigh = function() {
+    const btn = document.getElementById('sighBtn');
+    const circle = document.getElementById('sighCircle');
+    const inst = document.getElementById('sighInstruction');
+    if (!btn || !circle || !inst) return;
+
+    if (sighInterval) {
+        clearInterval(sighInterval);
+        sighInterval = null;
+        btn.innerText = "Start 60-Second Protocol";
+        circle.innerText = "Ready";
+        circle.style.transform = "scale(1)";
+        inst.innerText = "Click start for a 60-second real-time nervous system reset.";
+        return;
+    }
+
+    btn.innerText = "Stop Protocol";
+    let step = 0;
+
+    const runSighCycle = () => {
+        circle.innerText = "Deep Inhale (1)";
+        circle.style.transform = "scale(1.25)";
+        inst.innerText = "Take a deep, full breath in through your nose...";
+        
+        setTimeout(() => {
+            if (!sighInterval) return;
+            circle.innerText = "Top-off Inhale (2)";
+            circle.style.transform = "scale(1.35)";
+            inst.innerText = "Immediately take a quick second puff of air to fully expand lungs!";
+        }, 1500);
+
+        setTimeout(() => {
+            if (!sighInterval) return;
+            circle.innerText = "Slow Exhale";
+            circle.style.transform = "scale(0.85)";
+            inst.innerText = "Now, slowly and completely exhale through your mouth until empty...";
+        }, 3000);
+    };
+
+    runSighCycle();
+    sighInterval = setInterval(runSighCycle, 7000);
+};
+
+window.submitClinicalStressLog = async function() {
+    const rangeEl = document.getElementById('stressRange');
+    const triggersEl = document.getElementById('stressTriggersInput');
+    const somaticEl = document.getElementById('somaticManifestation');
+    const output = document.getElementById('stressResultsOutput');
+    if (!rangeEl || !output) return;
+
+    const score = parseInt(rangeEl.value, 10);
+    const triggers = triggersEl ? triggersEl.value.trim() : "General";
+    const somatic = somaticEl ? somaticEl.value : "Tension";
+
+    output.innerHTML = `<span style="color: var(--primary);">⏳ Analyzing acute autonomic load and generating recovery directives...</span>`;
+
+    try {
+        const res = await fetch("/api/stress/check-in", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ 
+                stress_score: score, 
+                triggers: `${triggers} [Manifestation: ${somatic}]` 
+            })
+        });
+        const data = await res.json();
+        
+        if (res.ok) {
+            let clinicalAction = "Maintain hydration and engage in 3 cycles of the physiological sigh.";
+            if (score >= 7) {
+                clinicalAction = "High autonomic arousal detected. Disengage from screen tasks immediately, practice 2 minutes of double-inhale box breathing, and re-evaluate physical posture.";
+            } else if (score >= 4) {
+                clinicalAction = "Moderate sympathetic load. Integrate a 10-minute post-meal walk or acoustic pacing to reduce cortisol drift.";
+            }
+
+            output.innerHTML = `
+                <div style="margin-bottom: 10px;">
+                    <strong style="color: var(--primary);">Logged Distress Load:</strong> 
+                    <span style="color: var(--text-main); font-weight:700;">${data.stress_score}/10</span> 
+                    <span style="color: var(--text-muted); font-size: 0.8rem;">(Trigger: ${triggers})</span>
+                </div>
+                <div style="background: rgba(0,242,254,0.04); border: 1px solid rgba(0,242,254,0.15); padding: 14px; border-radius: 10px; margin-bottom: 10px;">
+                    <strong style="color: var(--accent);">Targeted Behavioral Pacing:</strong><br>
+                    <p style="margin-top: 4px; color: #f8fafc; font-size: 0.88rem;">${clinicalAction}</p>
+                </div>
+                <div style="font-size: 0.82rem; color: var(--text-muted);">
+                    <em>Clinical Note: ${data.personalized_recommendation || 'Autonomic regulation protocol active.'}</em>
+                </div>
+                ${data.urgent_support_guidance ? `<div style="margin-top:10px; color:var(--danger); font-weight:600;">${data.urgent_support_guidance}</div>` : ''}
+            `;
+        } else {
+            output.innerHTML = `<span style="color: var(--danger);">⚠️ Failed to record stress check-in.</span>`;
+        }
+    } catch (e) {
+        output.innerHTML = `<span style="color: var(--danger);">❌ Connection failure to stress service.</span>`;
+    }
+};

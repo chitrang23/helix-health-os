@@ -1,0 +1,87 @@
+{
+  "corrections": [],
+  "verified_patterns": {
+    "total rbcs": [
+      {
+        "value": "3.69",
+        "unit": "",
+        "explanation": "TOTAL RBCs is a quantitative clinical parameter extracted from your diagnostic report. Your recorded measurement of 3.69 is recorded on your diagnostic panel. Review this longitudinal trend alongside your broader clinical history with your physician.",
+        "timestamp": "2026-10-28T12:12:27.232391",
+        "user_corrected": false
+      }
+    ],
+    "mch": [
+      {
+        "value": "29",
+        "unit": "pg",
+        "explanation": "MCH is a quantitative clinical parameter extracted from your diagnostic report. Your recorded measurement of 29 pg is within the optimal reference interval (25.0 - 34.0 pg). Review this longitudinal trend alongside your broader clinical history with your physician.",
+        "timestamp": "2026-10-28T12:49:45.997132",
+        "user_corrected": false
+      }
+    ],
+    "aig ratio": [
+      {
+        "value": "0.99",
+        "unit": "",
+        "explanation": "AIG Ratio is a quantitative clinical parameter extracted from your diagnostic report. Your recorded measurement of 0.99 is below the printed lower reference limit of 18.0 (-94.5% below lower threshold). Review this longitudinal trend alongside your broader clinical history with your physician.",
+        "timestamp": "2026-10-28T12:49:50.960662",
+        "user_corrected": false
+      }
+    ],
+    "lymphocytes #": [
+      {
+        "value": "219",
+        "unit": "",
+        "explanation": "LYMPHOCYTES # is a quantitative clinical parameter extracted from your diagnostic report. Your recorded measurement of 219 is recorded on your diagnostic panel. Review this longitudinal trend alongside your broader clinical history with your physician.",
+        "timestamp": "2026-10-28T12:49:53.314596",
+        "user_corrected": false
+      }
+    ],
+    "serum albumin": [
+      {
+        "value": "13.91",
+        "unit": "",
+        "explanation": "SERUM ALBUMIN is a quantitative clinical parameter extracted from your diagnostic report. Your recorded measurement of 13.91 is recorded on your diagnostic panel. Review this longitudinal trend alongside your broader clinical history with your physician.",
+        "timestamp": "2026-10-28T12:49:53.919167",
+        "user_corrected": false
+      }
+    ],
+    "indirect bilirubin": [
+      {
+        "value": "0.2",
+        "unit": "mg/dl",
+        "explanation": "INDIRECT BILIRUBIN is a quantitative clinical parameter extracted from your diagnostic report. Your recorded measurement of 0.2 mg/dl is below the printed lower reference limit of 1.0 mg/dl (-80.0% below lower threshold). Review this longitudinal trend alongside your broader clinical history with your physician.",
+        "timestamp": "2026-10-28T12:49:54.146385",
+        "user_corrected": false
+      }
+    ],
+    "platelet count": [
+      {
+        "value": "183",
+        "unit": "",
+        "explanation": "PLATELET COUNT is a quantitative clinical parameter extracted from your diagnostic report. Your recorded measurement of 183 is recorded on your diagnostic panel. Review this longitudinal trend alongside your broader clinical history with your physician.",
+        "timestamp": "2026-10-28T12:50:01.415892",
+        "user_corrected": false
+      }
+    ],
+    "row-cv": [
+      {
+        "value": "15.3",
+        "unit": "%",
+        "explanation": "ROW-CV is a quantitative clinical parameter extracted from your diagnostic report. Your recorded measurement of 15.3 % is below the printed lower reference limit of 115.0 % (-86.7% below lower threshold). Review this longitudinal trend alongside your broader clinical history with your physician.",
+        "timestamp": "2026-10-28T13:14:43.795253",
+        "user_corrected": false
+      }
+    ]
+  },
+  "confidence_weights": {
+    "total rbcs": 1.1,
+    "mch": 1.1,
+    "aig ratio": 1.1,
+    "lymphocytes #": 1.1,
+    "serum albumin": 1.1,
+    "indirect bilirubin": 1.1,
+    "platelet count": 1.1,
+    "row-cv": 1.1
+  }
+}

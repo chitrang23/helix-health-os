@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Helix Health OS // Enterprise Clinical Intelligence</title>
+    <title>Helix Health OS Enterprise Clinical Intelligence</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
@@ -80,6 +80,7 @@
             transition: all 0.3s ease;
             padding: 8px 12px;
             border-radius: 8px;
+            cursor: pointer;
         }
 
         .nav-links a:hover, .nav-links a.active {
@@ -283,17 +284,18 @@
 <body>
 
     <nav class="app-navbar">
-        <div class="brand"><span>⚡ HELIX // ENTERPRISE OS</span></div>
+        <div class="brand"><span>⚡ HELIX ENTERPRISE OS</span></div>
         <ul class="nav-links">
-            <li><a href="#" onclick="switchTab('dashboard', this)" class="active">Dashboard & OCR</a></li>
+            <li><a onclick="switchTab('dashboard', this)" class="active">Dashboard & OCR</a></li>
             <li><a href="/history.html">Patient History</a></li>
-            <li><a href="#" onclick="switchTab('stress', this)">🧘 Stress & Mindfulness</a></li>
-            <li><a href="#" onclick="switchTab('chatbot', this)">Gemini Clinical Chat</a></li>
-            <li><a href="#" onclick="switchTab('synthesizer', this)">✨ AI Pathology Synthesizer</a></li>
-            <li><a href="#" onclick="switchTab('simulation', this)">30-Day Twin</a></li>
-            <li><a href="#" onclick="switchTab('soapSection', this)">📋 SOAP & Briefing</a></li>
-            <li><a href="#" onclick="switchTab('specialists', this)">👨‍⚕️ Specialists</a></li>
-            <li><a href="#" onclick="switchTab('drugSafetySection', this)">🛡 Drug Safety Shield</a></li>
+            <li><a onclick="switchTab('stress', this)">🧘 Stress & Mindfulness</a></li>
+            <li><a onclick="switchTab('chatbot', this)"> Clinical Chat</a></li>
+            <li><a onclick="switchTab('synthesizer', this)">✨ AI Pathology Synthesizer</a></li>
+            <li><a onclick="switchTab('simulation', this)">30-Day Twin</a></li>
+            <li><a onclick="switchTab('soapSection', this)">📋 SOAP & Briefing</a></li>
+            <li><a onclick="switchTab('specialists', this)">👨‍⚕️ Specialists</a></li>
+            <li><a onclick="switchTab('drugSafetySection', this)">🛡 Drug Safety Shield</a></li>
+            <li><a onclick="switchTab('organRadar', this)">🫀 Organ Radar & Indices</a></li>
         </ul>
         <div class="navbar-right-controls">
             <select id="globalLangSelector" onchange="switchGlobalLanguage(this.value)" class="global-lang-select">
@@ -317,14 +319,74 @@
         <!-- 1. DASHBOARD & OCR -->
         <div id="dashboard" class="section-view active">
             <div class="grid-2" style="margin-bottom: 25px;">
-                <div class="card-3d">
-                    <div class="section-title">📄 Report Ingestion & OCR Hub</div>
-                    <form id="uploadForm">
-                        <input type="file" id="reportFile" required accept=".pdf,image/png,image/jpeg" style="margin-bottom:15px;">
-                        <button type="submit" class="btn-glow" style="width: 100%;">Parse & Ground Document</button>
-                    </form>
-                    <div id="uploadStatus" style="font-size: 0.85rem; color: var(--accent); margin-top: 15px;"></div>
-                </div>
+               <div class="card-3d">
+    <div class="section-title">📄 Report Ingestion & OCR Hub</div>
+    <div id="uploadForm">
+        <input type="file" id="reportFile" required accept=".pdf,image/png,image/jpeg" style="margin-bottom:15px;">
+        <button type="button" class="btn-glow" style="width: 100%;" onclick="
+            (async function() {
+                const fileInput = document.getElementById('reportFile');
+                const statusDiv = document.getElementById('uploadStatus');
+                if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+                    if (statusDiv) statusDiv.innerHTML = '<span style=\'color: var(--warning);\'>⚠️ Please select a file first.</span>';
+                    return;
+                }
+                if (statusDiv) statusDiv.innerHTML = '<span style=\'color: var(--primary);\'>⏳ Ingesting report and running clinical validation...</span>';
+                
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                const token = localStorage.getItem('helix_token');
+
+                try {
+                    let response = await fetch('/api/records/upload-report', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token },
+                        body: formData
+                    });
+
+                    if (response.status === 404) {
+                        response = await fetch('/api/clinical/upload-report', {
+                            method: 'POST',
+                            headers: { 'Authorization': 'Bearer ' + token },
+                            body: formData
+                        });
+                    }
+
+                    const result = await response.json();
+                    if (response.ok && result.success) {
+                        if (statusDiv) statusDiv.innerHTML = '<span style=\'color: var(--accent);\'>✅ ' + result.message + '</span>';
+                        
+                        document.getElementById('metaPatientName').innerText = result.patient_name || 'MS. SNEHA RAJU SHINDE';
+                        document.getElementById('metaHospital').innerText = result.hospital_name || 'UMC Hospitals - Navi Mumbai';
+                        document.getElementById('metaDate').innerText = result.report_date || 'Encounter Series Verified';
+
+                        const biomarkers = result.extracted_biomarkers || {};
+
+                        localStorage.setItem('helix_active_report', JSON.stringify({
+                            patient_name: result.patient_name,
+                            hospital_name: result.hospital_name,
+                            report_date: result.report_date,
+                            extracted_biomarkers: biomarkers
+                        }));
+
+                        if (typeof renderExtractedParameters === 'function') {
+                            renderExtractedParameters(biomarkers);
+                        }
+                        if (typeof loadUserAnalytes === 'function') {
+                            loadUserAnalytes();
+                        }
+                    } else {
+                        if (statusDiv) statusDiv.innerHTML = '<span style=\'color: var(--danger);\'>⚠️ ' + (result.detail || result.message || 'Verification halted.') + '</span>';
+                    }
+                } catch (err) {
+                    console.error('Upload error:', err);
+                    if (statusDiv) statusDiv.innerHTML = '<span style=\'color: var(--danger);\'>❌ Connection failed. Check server.</span>';
+                }
+            })();
+        ">Parse & Ground Document</button>
+    </div>
+    <div id="uploadStatus" style="font-size: 0.85rem; color: var(--accent); margin-top: 15px;"></div>
+</div>
                 
                 <!-- Zero-Fake-Data Dynamic Report Metadata -->
                 <div class="card-3d">
@@ -366,39 +428,59 @@
         </div>
 
         <!-- 2. STRESS & MINDFULNESS -->
+        <!-- 2. STRESS & MINDFULNESS -->
         <div id="stress" class="section-view">
             <div class="grid-2" style="margin-bottom: 25px;">
+                <!-- 1. Real-Time Physiological Down-Regulation Pacer -->
                 <div class="card-3d">
-                    <div class="section-title">🧘 Stress Index Check-In</div>
-                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">Log your active somatic and psychological stressors to generate personalized evidence-informed regulation.</p>
+                    <div class="section-title">🫁 Real-Time Autonomic Reset (The Physiological Sigh)</div>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">
+                        Validated neuroscience protocol: Two quick inhales through the nose followed by a long, slow exhale through the mouth to reinflate collapsed alveoli and instantly offload carbon dioxide.
+                    </p>
                     
-                    <div style="margin-bottom: 18px;">
-                        <label style="display:block; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 6px;">Perceived Stress Level (1-10): <span id="stressScoreVal" style="color:var(--primary); font-weight:700;">5</span></label>
-                        <input type="range" id="stressRange" min="1" max="10" value="5" oninput="document.getElementById('stressScoreVal').innerText=this.value">
+                    <div class="breath-container" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 16px; padding: 25px; text-align: center;">
+                        <div id="sighCircle" style="width: 120px; height: 120px; border-radius: 50%; background: linear-gradient(135deg, rgba(0,242,254,0.15), rgba(79,172,254,0.3)); border: 2px solid var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--primary); margin: 0 auto 15px auto; transition: transform 1.5s ease-in-out; box-shadow: 0 0 25px rgba(0,242,254,0.2);">
+                            Ready
+                        </div>
+                        <p id="sighInstruction" style="font-size: 0.9rem; color: var(--text-main); font-weight: 600; margin-bottom: 15px;">Click start for a 60-second real-time nervous system reset.</p>
+                        <button class="btn-glow" onclick="togglePhysiologicalSigh()" id="sighBtn" style="padding: 10px 24px; font-size: 0.82rem;">Start 60-Second Protocol</button>
                     </div>
-
-                    <div style="margin-bottom: 18px;">
-                        <label style="display:block; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 6px;">Reported Triggers</label>
-                        <input type="text" id="stressTriggersInput" placeholder="e.g., Workload, sleep deficit, health worries">
-                    </div>
-
-                    <button class="btn-glow" onclick="submitStressCheckIn()" style="width:100%;">Record Check-In</button>
                 </div>
 
+                <!-- 2. Somatic Trigger & Biomarker Correlation Log -->
                 <div class="card-3d">
-                    <div class="section-title">🌬 4-4-4-4 Box Breathing Vagal Pacer</div>
-                    <div class="breath-container">
-                        <div id="breathCircle" class="breathing-circle">Ready</div>
-                        <p id="breathInstruction" style="font-size: 0.85rem; color: var(--text-muted); text-align: center; margin-bottom: 15px;">Engage parasympathetic nerve stimulation to stabilize acute sympathetic arousal.</p>
-                        <button class="btn-glow" onclick="toggleBreathingExercise()" id="breathBtn" style="padding: 8px 20px; font-size: 0.8rem;">Start Exercise</button>
+                    <div class="section-title">📝 Somatic Stress & Trigger Log</div>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">Map acute psychological triggers directly to autonomic arousal to track systemic stress load over time.</p>
+                    
+                    <div style="margin-bottom: 16px;">
+                        <label style="display:block; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 6px;">Acute Distress Level (1-10): <span id="stressScoreVal" style="color:var(--primary); font-weight:700;">4</span></label>
+                        <input type="range" id="stressRange" min="1" max="10" value="4" oninput="document.getElementById('stressScoreVal').innerText=this.value">
                     </div>
+
+                    <div style="margin-bottom: 16px;">
+                        <label style="display:block; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 6px;">Primary Somatic Trigger / Context</label>
+                        <input type="text" id="stressTriggersInput" placeholder="e.g., Acute work deadline, sleep deprivation, lab anxiety">
+                    </div>
+
+                    <div style="margin-bottom: 16px;">
+                        <label style="display:block; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 6px;">Physical Manifestation</label>
+                        <select id="somaticManifestation" style="width:100%;">
+                            <option value="Muscle tension / Jaw clenching">Muscle tension / Jaw clenching</option>
+                            <option value="Shortness of breath / Chest tightness">Shortness of breath / Chest tightness</option>
+                            <option value="Racing thoughts / Brain fog">Racing thoughts / Brain fog</option>
+                            <option value="Fatigue / Lethargy">Fatigue / Lethargy</option>
+                        </select>
+                    </div>
+
+                    <button class="btn-glow" onclick="submitClinicalStressLog()" style="width:100%;">Log Clinical Stress Entry</button>
                 </div>
             </div>
 
+            <!-- Real-World Actionable Recommendations Output -->
             <div class="card-3d">
-                <div class="section-title">🌿 Somatic Feedback & Longitudinal Insights</div>
-                <div id="stressResultsOutput" style="background: rgba(0,0,0,0.25); padding: 20px; border-radius: 12px; border: 1px solid var(--border); font-size: 0.9rem; color: var(--text-muted); line-height: 1.7;">
-                    Complete your check-in above to view tailored behavioral pacing protocols.
+                <div class="section-title">🛡 Evidence-Based Autonomic Regulation Protocol</div>
+                <div id="stressResultsOutput" style="background: rgba(0,0,0,0.25); padding: 22px; border-radius: 12px; border: 1px solid var(--border); font-size: 0.9rem; color: var(--text-muted); line-height: 1.7;">
+                    Log your check-in above to generate a targeted autonomic recovery protocol based on your physiological state.
                 </div>
             </div>
         </div>
@@ -582,7 +664,30 @@
         </div>
     </div>
 
+<!-- ORGAN RADAR & INDICES -->
+        <div id="organRadar" class="section-view">
+            <div class="card-3d">
+                <div class="section-title">🫀 Multi-Organ Homeostatic Radar & Derived Indices</div>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">Zero-API clinical intelligence computed locally from your uploaded vault observations.</p>
+                
+                <div class="grid-2">
+                    <div style="position: relative; height: 280px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px; padding: 10px;">
+                        <canvas id="organRadarChart"></canvas>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <div id="allostaticScoreBadge" style="background: rgba(0, 242, 254, 0.08); border: 1px solid rgba(0, 242, 254, 0.2); padding: 12px; border-radius: 10px; font-weight: 700; color: var(--primary); text-align: center;">
+                            Homeostatic Index: Calculating...
+                        </div>
+                        <div id="derivedIndicesContainer" style="display: flex; flex-direction: column; gap: 10px;">
+                            <!-- Dynamically populated derived indices -->
+                        </div>
+                        <button class="btn-glow" onclick="downloadFHIRBundle()" style="margin-top: auto;">Download HL7 FHIR Bundle (.json)</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     <!-- Core App Logic Scripts -->
+     <script src="/static/js/global-translator.js"></script>
     <script src="/static/js/dashboard.js"></script>
 </body>
 </html>
